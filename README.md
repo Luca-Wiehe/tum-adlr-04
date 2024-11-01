@@ -14,12 +14,27 @@
 Repository for the course "Advanced Deep Learning for Robotics" at TUM.
 
 ## Google Cloud Setup
-Install basic Linux Setup using `sudo apt-get update` and `sudo apt-get -y install build-essential`.
-Install Nvidia Driver. First install required packages: `sudo apt-get -y install alsa-utils`. Next, install Nvidia Driver `sudo ubuntu-drivers -y install --gpgpu nvidia:535-server`.
-Install CUDA Driver as described [here](https://developer.nvidia.com/cuda-12-2-0-download-archive?target_os=Linux&target_arch=x86_64&Distribution=Ubuntu&target_version=20.04&target_type=deb_local)
+```
+sudo apt update
+sudo apt -y install build-essential
+sudo apt -y install nvidia-driver-535
+
+sudo reboot
+
+wget https://developer.download.nvidia.com/compute/cuda/12.2.0/local_installers/cuda_12.2.0_535.54.03_linux.run
+sudo sh cuda_12.2.0_535.54.03_linux.run # deselect the driver option in the installation dialog
+
+sudo reboot
+
+wget https://repo.anaconda.com/archive/Anaconda3-2024.10-1-Linux-x86_64.sh
+bash Anaconda3-2024.10-1-Linux-x86_64.sh
+conda init
 
 
-Clone our repository using `git clone https://github.com/Luca-Wiehe/tum-adlr-04.git`
+```
+
+## Repository Setup
+Clone our repository using `git clone https://github.com/Luca-Wiehe/tum-adlr-04.git`. 
 You will face an error that a HuggingFace import cannot be resolved. 
 
 
