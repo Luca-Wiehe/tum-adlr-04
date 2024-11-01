@@ -1,1 +1,3 @@
 /diffusion_policy/data
+/diffusion_policy/checkpoints
+__pycache__

@@ -13,6 +13,16 @@
 
 Repository for the course "Advanced Deep Learning for Robotics" at TUM.
 
+## Google Cloud Setup
+Install basic Linux Setup using `sudo apt-get install build-essential`.
+Install Nvidia Driver. First install required packages: `sudo apt-get install alsa-utils`. Next, install NVidia Driver
+Install CUDA Driver as described [here](https://developer.nvidia.com/cuda-12-2-0-download-archive?target_os=Linux&target_arch=x86_64&Distribution=Ubuntu&target_version=20.04&target_type=deb_local)
+
+
+Clone our repository using `git clone `
+You will face an error that a HuggingFace import cannot be resolved. 
+
+
 ## Usage
 When running on Google Cloud, use `export PATH=~/anaconda3/bin:$PATH` to find anaconda. Use `conda init` when exporting the conda path for the first time.
 
@@ -27,4 +37,5 @@ unzip robomimic_image.zip
 unzip robomimic_lowdim.zip
 ```
 
+`sudo apt install ubuntu-drivers-common`
 
