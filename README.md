@@ -14,6 +14,8 @@
 Repository for the course "Advanced Deep Learning for Robotics" at TUM.
 
 ## Google Cloud Setup
+In case of doubt, I found [this blogpost](https://askubuntu.com/questions/1077061/how-do-i-install-nvidia-and-cuda-drivers-into-ubuntu/1077063#1077063) very helpful.
+
 ```
 sudo apt update
 sudo apt -y install build-essential
@@ -21,7 +23,6 @@ sudo apt -y install nvidia-driver-535
 
 sudo reboot
 
-# in case of doubt, refer to https://askubuntu.com/questions/1077061/how-do-i-install-nvidia-and-cuda-drivers-into-ubuntu/1077063#1077063
 wget https://developer.download.nvidia.com/compute/cuda/12.2.0/local_installers/cuda_12.2.0_535.54.03_linux.run
 sudo sh cuda_12.2.0_535.54.03_linux.run # deselect the driver option in the installation dialog
 
