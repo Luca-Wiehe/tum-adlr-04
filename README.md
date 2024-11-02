@@ -14,7 +14,8 @@
 Repository for the course "Advanced Deep Learning for Robotics" at TUM.
 
 ## Google Cloud Setup
-In case of doubt, refer [this link](https://askubuntu.com/questions/1077061/how-do-i-install-nvidia-and-cuda-drivers-into-ubuntu/1077063#1077063) was very helpful.
+In case of doubt, I found [this blogpost](https://askubuntu.com/questions/1077061/how-do-i-install-nvidia-and-cuda-drivers-into-ubuntu/1077063#1077063) very helpful.
+
 ```
 sudo apt update
 sudo apt -y install build-essential
@@ -29,6 +30,7 @@ sudo reboot
 
 wget https://repo.anaconda.com/archive/Anaconda3-2024.10-1-Linux-x86_64.sh
 bash Anaconda3-2024.10-1-Linux-x86_64.sh
+export PATH=~/anaconda3/bin:$PATH
 
 # reopen terminal
 
@@ -43,8 +45,6 @@ You will face an error that a HuggingFace import cannot be resolved.
 
 
 ## Usage
-When running on Google Cloud, use `export PATH=~/anaconda3/bin:$PATH` to find anaconda. Use `conda init` when exporting the conda path for the first time.
-
 Start by executing `cd diffusion_policy` followed by `conda env create -f conda_environment.yaml`.  To activate the environment, perform `conda activate robodiff`.
 
 Create a data folder using `cd diffusion_policy && mkdir data && cd data` and download RoboMimic training data using the following code.
