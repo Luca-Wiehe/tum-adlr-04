@@ -62,14 +62,17 @@ unzip robomimic_lowdim.zip
 Data must be adapted to the interface. For policy generation, it is required:
 
 Observations, tensor dictionary `"obs":(B, To, Do)`
-B = Batch size
-To = Observation horizon
-Do = Observation dimensionality 
+- B = Batch size
+- To = Observation horizon
+- Do = Observation dimensionality
+- 
 Observation dimensionality varies according to the data set, e.g., object position, eef position, (HxW when using images).
 
 Actions, tensor dictionary `"action": (B, Ta, Da)`
-B = Batch size
-Ta = Action horizon
-Da = Action dimensionality e.g., 3D - axis angle configuration of eef for velocity control space.
+- B = Batch size
+- Ta = Action horizon
+Da = Action dimensionality
+
+Actions dimensionality varies according to the data set e.g., 3D - axis angle configuration of eef for velocity control space.
 
 
