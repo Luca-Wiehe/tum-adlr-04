@@ -81,10 +81,20 @@ In addition, we provide the following workspace to test the domain transfer of d
 #### Summary of Lowdim Workspace
 `TrainRobomimicLowdimWorkspace()` is the class of interest. The dataset inherits from `BaseLowdimDataset()`, a class that is part of `base_dataset.py`. The `BaseLowdimDataset()` specifies the observation format (`T, do`) and the action format (`T, da`).
 
-Meaning of dataset parameters:
-- `T`: 
-- `do`: 
-- `da`: 
+Observations, tensor dictionary `"obs":(B, To, Do)`
+- B = Batch size
+- To = Observation horizon
+- Do = Observation dimensionality
+
+Observation dimensionality varies according to the data set, e.g., object position, eef position, (HxW when using images).
+
+Actions, tensor dictionary `"action": (B, Ta, Da)`
+- B = Batch size
+- Ta = Action horizon
+- Da = Action dimensionality
+
+Actions dimensionality varies according to the data set e.g., 3D - axis angle configuration of eef for velocity control space.
 
 ### Executing Hyperparameter Analysis
 One of our primary goals is to test how hyperparameter configurations differ across approaches. To explore hyperparameter configurations in an informed way, we provide code to conduct hyperparameter search.
+
