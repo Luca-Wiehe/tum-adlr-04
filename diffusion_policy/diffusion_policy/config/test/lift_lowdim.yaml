@@ -1,0 +1,53 @@
+name: lift_lowdim
+
+obs_dim: 19
+action_dim: 7
+keypoint_dim: 3
+
+dataloader:
+  batch_size: 256
+  num_workers: 1
+  shuffle: False
+  pin_memory: True
+  persistent_workers: False
+
+obs_keys: &obs_keys ['object', 'robot0_eef_pos', 'robot0_eef_quat', 'robot0_gripper_qpos']
+task_name: &task_name lift
+dataset_type: &dataset_type ph
+dataset_path: &dataset_path ./diffusion_policy/data/robomimic/datasets/lift/ph/low_dim.hdf5
+abs_action: &abs_action False
+
+env_runner:
+  _target_: diffusion_policy.env_runner.robomimic_lowdim_runner.RobomimicLowdimRunner
+  dataset_path: *dataset_path
+  obs_keys: *obs_keys
+  n_train: 6
+  n_train_vis: 2
+  train_start_idx: 0
+  n_test: 50
+  n_test_vis: 4
+  test_start_seed: 100000
+  # use python's eval function as resolver, single-quoted string as argument
+  max_steps: 400
+  n_obs_steps: 1
+  n_action_steps: 1
+  n_latency_steps: 0
+  render_hw: [128,128]
+  fps: 10
+  crf: 22
+  past_action: False
+  abs_action: *abs_action
+  tqdm_interval_sec: 1.0
+  n_envs: 28
+
+dataset:
+  _target_: diffusion_policy.dataset.robomimic_replay_lowdim_dataset.RobomimicReplayLowdimDataset
+  dataset_path: *dataset_path
+  horizon: 10
+  pad_before: 0
+  pad_after: 0
+  obs_keys: *obs_keys
+  abs_action: *abs_action
+  use_legacy_normalizer: False
+  seed: 42
+  val_ratio: 0.02

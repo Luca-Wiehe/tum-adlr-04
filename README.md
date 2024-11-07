@@ -41,12 +41,13 @@ sudo apt-get -y install libosmesa6-dev
 
 ## Repository Setup
 Clone our repository using `git clone https://github.com/Luca-Wiehe/tum-adlr-04.git`. 
-You will face an error that a HuggingFace import cannot be resolved. 
+You will face an error that a HuggingFace import cannot be resolved. Follow the traceback and remove the import of the corresponding HuggingFace module. Things will work after.
 
 
 ## Usage
 Start by executing `cd diffusion_policy` followed by `conda env create -f conda_environment.yaml`.  To activate the environment, perform `conda activate robodiff`.
 
+### Data Download
 Create a data folder using `cd diffusion_policy && mkdir data && cd data` and download RoboMimic training data using the following code.
 ```
 wget https://diffusion-policy.cs.columbia.edu/data/training/robomimic_image.zip
@@ -56,5 +57,34 @@ unzip robomimic_image.zip
 unzip robomimic_lowdim.zip
 ```
 
-`sudo apt install ubuntu-drivers-common`
+### Reproducing Results from Diffusion Policy
+To reproduce results from the paper, please make sure that you have at least 48GB of RAM available. Otherwise, you will face the following [Github Issue](https://github.com/real-stanford/diffusion_policy/issues/118). 
 
+```
+conda activate robodiff
+wandb login
+cd <repo_root>
+python ./diffusion_policy/eval.py --checkpoint <ckpt_path> --output_dir <out_path>
+```
+
+### Training Custom Models
+Training a custom model happens in `diffusion_policy/train.py`. It is required to setup a configuration file. Configuration files can be found in `<repo_root>/diffusion_policy/diffusion_policy/workspace/`. 
+
+The authors of <it>Diffusion Policy</it> provide the following configuration files (among others that we will not make use of):
+- `base_workspace.py`: Superclass that manages saving/loading configurations of a workspace
+- `train_robomimic_image_workspace.py`: Workspace for Robomimic with images as a basis for trajectory generation
+- `train_robomimic_lowdim_workspace.py`: Workspace for Robomimic with robot configurations as a basis for trajectory generation
+
+In addition, we provide the following workspace to test the domain transfer of diffusion policy to new domains:
+- `some_workspace.py`: To be implemented
+
+#### Summary of Lowdim Workspace
+`TrainRobomimicLowdimWorkspace()` is the class of interest. The dataset inherits from `BaseLowdimDataset()`, a class that is part of `base_dataset.py`. The `BaseLowdimDataset()` specifies the observation format (`T, do`) and the action format (`T, da`).
+
+Meaning of dataset parameters:
+- `T`: 
+- `do`: 
+- `da`: 
+
+### Executing Hyperparameter Analysis
+One of our primary goals is to test how hyperparameter configurations differ across approaches. To explore hyperparameter configurations in an informed way, we provide code to conduct hyperparameter search.
