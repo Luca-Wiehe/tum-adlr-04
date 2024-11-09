@@ -1,0 +1,266 @@
+2024-11-09 10:52:13,455 INFO    MainThread:1915 [wandb_setup.py:_flush():68] Configure stats pid to 1915
+2024-11-09 10:52:13,456 INFO    MainThread:1915 [wandb_setup.py:_flush():68] Loading settings from /home/luca_daniel/.config/wandb/settings
+2024-11-09 10:52:13,457 INFO    MainThread:1915 [wandb_setup.py:_flush():68] Loading settings from /home/luca_daniel/tum-adlr-04/wandb/settings
+2024-11-09 10:52:13,457 INFO    MainThread:1915 [wandb_setup.py:_flush():68] Loading settings from environment variables: {'_require_service': 'True'}
+2024-11-09 10:52:13,457 INFO    MainThread:1915 [wandb_setup.py:_flush():68] Inferring run settings from compute environment: {'program': '<python with no main file>'}
+2024-11-09 10:52:13,457 INFO    MainThread:1915 [wandb_init.py:_log_setup():476] Logging user logs to /home/luca_daniel/tum-adlr-04/wandb/run-20241109_105213-vfvyv0m8/logs/debug.log
+2024-11-09 10:52:13,457 INFO    MainThread:1915 [wandb_init.py:_log_setup():477] Logging internal logs to /home/luca_daniel/tum-adlr-04/wandb/run-20241109_105213-vfvyv0m8/logs/debug-internal.log
+2024-11-09 10:52:13,457 INFO    MainThread:1915 [wandb_init.py:init():516] calling init triggers
+2024-11-09 10:52:13,457 INFO    MainThread:1915 [wandb_init.py:init():519] wandb.init called with sweep_config: {}
+config: {}
+2024-11-09 10:52:13,457 INFO    MainThread:1915 [wandb_init.py:init():535] re-initializing run, found existing run on stack: 9qvigqb1
+2024-11-09 10:52:13,459 INFO    MainThread:1915 [wandb_run.py:_finish():1720] finishing run dan_umbrub-tum/diffusion_policy_debug/9qvigqb1
+2024-11-09 10:52:13,459 ERROR   MainThread:1915 [jupyter.py:save_history():440] Run pip install nbformat to save notebook history
+2024-11-09 10:52:13,459 INFO    MainThread:1915 [jupyter.py:save_ipynb():378] not saving jupyter notebook
+2024-11-09 10:52:13,460 INFO    MainThread:1915 [wandb_init.py:_jupyter_teardown():408] cleaning up jupyter logic
+2024-11-09 10:52:13,460 INFO    MainThread:1915 [wandb_run.py:_atexit_cleanup():1923] got exitcode: 0
+2024-11-09 10:52:13,460 INFO    MainThread:1915 [wandb_run.py:_restore():1906] restore
+2024-11-09 10:52:13,460 INFO    MainThread:1915 [wandb_run.py:_restore():1912] restore done
+2024-11-09 10:52:13,466 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 1
+}
+pusher_stats {
+  uploaded_bytes: 721
+  total_bytes: 721
+}
+
+2024-11-09 10:52:13,754 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 1
+}
+pusher_stats {
+  uploaded_bytes: 721
+  total_bytes: 721
+}
+
+2024-11-09 10:52:14,899 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 1
+}
+pusher_stats {
+  uploaded_bytes: 721
+  total_bytes: 721
+}
+
+2024-11-09 10:52:15,557 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 5
+}
+pusher_stats {
+  uploaded_bytes: 721
+  total_bytes: 25105
+}
+
+2024-11-09 10:52:15,659 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 6
+}
+pusher_stats {
+  uploaded_bytes: 721
+  total_bytes: 25133
+}
+
+2024-11-09 10:52:15,763 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 6
+}
+pusher_stats {
+  uploaded_bytes: 10028
+  total_bytes: 25133
+}
+
+2024-11-09 10:52:15,866 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 6
+}
+pusher_stats {
+  uploaded_bytes: 25133
+  total_bytes: 25133
+}
+
+2024-11-09 10:52:15,968 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 6
+}
+pusher_stats {
+  uploaded_bytes: 25133
+  total_bytes: 25133
+}
+
+2024-11-09 10:52:16,070 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 6
+}
+pusher_stats {
+  uploaded_bytes: 25133
+  total_bytes: 25133
+}
+
+2024-11-09 10:52:16,172 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 6
+}
+pusher_stats {
+  uploaded_bytes: 25133
+  total_bytes: 25133
+}
+
+2024-11-09 10:52:16,806 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 6
+}
+pusher_stats {
+  uploaded_bytes: 25133
+  total_bytes: 25133
+}
+
+2024-11-09 10:52:17,169 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: done: true
+exit_result {
+}
+file_counts {
+  wandb_count: 6
+}
+pusher_stats {
+  uploaded_bytes: 25133
+  total_bytes: 25133
+}
+local_info {
+}
+
+2024-11-09 10:52:18,275 INFO    MainThread:1915 [wandb_run.py:_footer_history_summary_info():3321] rendering history
+2024-11-09 10:52:18,275 INFO    MainThread:1915 [wandb_run.py:_footer_history_summary_info():3353] rendering summary
+2024-11-09 10:52:18,277 INFO    MainThread:1915 [wandb_run.py:_footer_sync_info():3277] logging synced files
+2024-11-09 10:52:18,281 INFO    MainThread:1915 [wandb_init.py:init():569] starting backend
+2024-11-09 10:52:18,281 INFO    MainThread:1915 [wandb_init.py:init():573] setting up manager
+2024-11-09 10:52:18,283 INFO    MainThread:1915 [backend.py:_multiprocessing_setup():102] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2024-11-09 10:52:18,284 INFO    MainThread:1915 [wandb_init.py:init():580] backend started and connected
+2024-11-09 10:52:18,286 INFO    MainThread:1915 [wandb_run.py:_label_probe_notebook():1098] probe notebook
+2024-11-09 10:52:18,286 INFO    MainThread:1915 [wandb_run.py:_label_probe_notebook():1108] Unable to probe notebook: 'NoneType' object has no attribute 'get'
+2024-11-09 10:52:18,286 INFO    MainThread:1915 [wandb_init.py:init():658] updated telemetry
+2024-11-09 10:52:18,297 INFO    MainThread:1915 [wandb_init.py:init():692] communicating run to backend with 30 second timeout
+2024-11-09 10:52:19,750 INFO    MainThread:1915 [wandb_run.py:_on_init():1974] communicating current version
+2024-11-09 10:52:19,772 INFO    MainThread:1915 [wandb_run.py:_on_init():1978] got version response upgrade_message: "wandb version 0.18.6 is available!  To upgrade, please run:\n $ pip install wandb --upgrade"
+
+2024-11-09 10:52:19,772 INFO    MainThread:1915 [wandb_init.py:init():727] starting run threads in backend
+2024-11-09 10:52:23,762 INFO    MainThread:1915 [wandb_run.py:_console_start():1954] atexit reg
+2024-11-09 10:52:23,762 INFO    MainThread:1915 [wandb_run.py:_redirect():1812] redirect: SettingsConsole.WRAP_RAW
+2024-11-09 10:52:23,762 INFO    MainThread:1915 [wandb_run.py:_redirect():1877] Wrapping output streams.
+2024-11-09 10:52:23,762 INFO    MainThread:1915 [wandb_run.py:_redirect():1899] Redirects installed.
+2024-11-09 10:52:23,763 INFO    MainThread:1915 [wandb_init.py:init():764] run started, returning control to user process
+2024-11-09 10:52:23,881 INFO    MainThread:1915 [wandb_setup.py:_flush():68] Configure stats pid to 1915
+2024-11-09 10:52:23,881 INFO    MainThread:1915 [wandb_setup.py:_flush():68] Loading settings from /home/luca_daniel/.config/wandb/settings
+2024-11-09 10:52:23,881 INFO    MainThread:1915 [wandb_setup.py:_flush():68] Loading settings from /home/luca_daniel/tum-adlr-04/wandb/settings
+2024-11-09 10:52:23,881 INFO    MainThread:1915 [wandb_setup.py:_flush():68] Loading settings from environment variables: {'_require_service': 'True'}
+2024-11-09 10:52:23,881 INFO    MainThread:1915 [wandb_setup.py:_flush():68] Inferring run settings from compute environment: {'program': '<python with no main file>'}
+2024-11-09 10:52:23,882 INFO    MainThread:1915 [wandb_init.py:_log_setup():476] Logging user logs to /tmp/wandb/run-20241109_105223-dsmqkz03/logs/debug.log
+2024-11-09 10:52:23,882 INFO    MainThread:1915 [wandb_init.py:_log_setup():477] Logging internal logs to /tmp/wandb/run-20241109_105223-dsmqkz03/logs/debug-internal.log
+2024-11-09 10:52:23,882 INFO    MainThread:1915 [wandb_init.py:_jupyter_setup():426] configuring jupyter hooks <wandb.sdk.wandb_init._WandbInit object at 0x7fd65a6bfee0>
+2024-11-09 10:52:23,882 INFO    MainThread:1915 [wandb_init.py:init():516] calling init triggers
+2024-11-09 10:52:23,882 INFO    MainThread:1915 [wandb_init.py:init():519] wandb.init called with sweep_config: {}
+config: {'_target_': 'diffusion_policy.workspace.train_diffusion_transformer_lowdim_workspace.TrainDiffusionTransformerLowdimWorkspace', 'action_dim': 10, 'checkpoint': {'save_last_ckpt': True, 'save_last_snapshot': False, 'topk': {'format_str': 'epoch={epoch:04d}-test_mean_score={test_mean_score:.3f}.ckpt', 'k': 5, 'mode': 'max', 'monitor_key': 'test_mean_score'}}, 'dataloader': {'batch_size': 256, 'num_workers': 1, 'persistent_workers': False, 'pin_memory': True, 'shuffle': True}, 'ema': {'_target_': 'diffusion_policy.model.diffusion.ema_model.EMAModel', 'inv_gamma': 1.0, 'max_value': 0.9999, 'min_value': 0.0, 'power': 0.75, 'update_after_step': 0}, 'exp_name': 'default', 'horizon': 10, 'keypoint_visible_rate': 1.0, 'logging': {'group': None, 'id': None, 'mode': 'online', 'name': '2022.12.24-06.24.51_train_diffusion_transformer_lowdim_lift_lowdim', 'project': 'diffusion_policy_debug', 'resume': True, 'tags': ['train_diffusion_transformer_lowdim', 'lift_lowdim', 'default']}, 'multi_run': {'run_dir': 'data/outputs/2022.12.24/06.24.51_train_diffusion_transformer_lowdim_lift_lowdim', 'wandb_name_base': '2022.12.24-06.24.51_train_diffusion_transformer_lowdim_lift_lowdim'}, 'n_action_steps': 8, 'n_latency_steps': 0, 'n_obs_steps': 2, 'name': 'train_diffusion_transformer_lowdim', 'obs_as_cond': True, 'obs_dim': 19, 'optimizer': {'betas': [0.9, 0.95], 'learning_rate': 0.0001, 'weight_decay': 0.001}, 'past_action_visible': False, 'policy': {'_target_': 'diffusion_policy.policy.diffusion_transformer_lowdim_policy.DiffusionTransformerLowdimPolicy', 'action_dim': 10, 'horizon': 10, 'model': {'_target_': 'diffusion_policy.model.diffusion.transformer_for_diffusion.TransformerForDiffusion', 'causal_attn': True, 'cond_dim': 19, 'horizon': 10, 'input_dim': 10, 'n_cond_layers': 0, 'n_emb': 256, 'n_head': 4, 'n_layer': 8, 'n_obs_steps': 2, 'obs_as_cond': True, 'output_dim': 10, 'p_drop_attn': 0.3, 'p_drop_emb': 0.0, 'time_as_cond': True}, 'n_action_steps': 8, 'n_obs_steps': 2, 'noise_scheduler': {'_target_': 'diffusers.schedulers.scheduling_ddpm.DDPMScheduler', 'beta_end': 0.02, 'beta_schedule': 'squaredcos_cap_v2', 'beta_start': 0.0001, 'clip_sample': True, 'num_train_timesteps': 100, 'prediction_type': 'epsilon', 'variance_type': 'fixed_small'}, 'num_inference_steps': 100, 'obs_as_cond': True, 'obs_dim': 19, 'pred_action_steps_only': False}, 'pred_action_steps_only': False, 'task': {'abs_action': True, 'action_dim': 10, 'dataset': {'_target_': 'diffusion_policy.dataset.robomimic_replay_lowdim_dataset.RobomimicReplayLowdimDataset', 'abs_action': True, 'dataset_path': 'data/robomimic/datasets/lift/ph/low_dim_abs.hdf5', 'horizon': 10, 'obs_keys': ['object', 'robot0_eef_pos', 'robot0_eef_quat', 'robot0_gripper_qpos'], 'pad_after': 7, 'pad_before': 1, 'rotation_rep': 'rotation_6d', 'seed': 42, 'val_ratio': 0.02}, 'dataset_path': 'data/robomimic/datasets/lift/ph/low_dim_abs.hdf5', 'dataset_type': 'ph', 'env_runner': {'_target_': 'diffusion_policy.env_runner.robomimic_lowdim_runner.RobomimicLowdimRunner', 'abs_action': True, 'crf': 22, 'dataset_path': 'data/robomimic/datasets/lift/ph/low_dim_abs.hdf5', 'fps': 10, 'max_steps': 400, 'n_action_steps': 8, 'n_envs': 28, 'n_latency_steps': 0, 'n_obs_steps': 2, 'n_test': 50, 'n_test_vis': 3, 'n_train': 6, 'n_train_vis': 2, 'obs_keys': ['object', 'robot0_eef_pos', 'robot0_eef_quat', 'robot0_gripper_qpos'], 'past_action': False, 'render_hw': [128, 128], 'test_start_seed': 100000, 'tqdm_interval_sec': 1.0, 'train_start_idx': 0}, 'keypoint_dim': 3, 'name': 'lift_lowdim', 'obs_dim': 19, 'obs_keys': ['object', 'robot0_eef_pos', 'robot0_eef_quat', 'robot0_gripper_qpos'], 'task_name': 'lift'}, 'task_name': 'lift_lowdim', 'training': {'checkpoint_every': 50, 'debug': False, 'device': 'cuda:0', 'gradient_accumulate_every': 1, 'lr_scheduler': 'cosine', 'lr_warmup_steps': 1000, 'max_train_steps': None, 'max_val_steps': None, 'num_epochs': 8000, 'resume': True, 'rollout_every': 50, 'sample_every': 5, 'seed': 42, 'tqdm_interval_sec': 1.0, 'use_ema': True, 'val_every': 1}, 'val_dataloader': {'batch_size': 256, 'num_workers': 1, 'persistent_workers': False, 'pin_memory': True, 'shuffle': False}}
+2024-11-09 10:52:23,882 INFO    MainThread:1915 [wandb_init.py:init():535] re-initializing run, found existing run on stack: vfvyv0m8
+2024-11-09 10:52:23,884 INFO    MainThread:1915 [wandb_run.py:_finish():1720] finishing run dan_umbrub-tum/Diffusion Policy/vfvyv0m8
+2024-11-09 10:52:23,884 INFO    MainThread:1915 [wandb_run.py:_atexit_cleanup():1923] got exitcode: 0
+2024-11-09 10:52:23,885 INFO    MainThread:1915 [wandb_run.py:_restore():1906] restore
+2024-11-09 10:52:23,885 INFO    MainThread:1915 [wandb_run.py:_restore():1912] restore done
+2024-11-09 10:52:24,035 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 1
+}
+pusher_stats {
+  total_bytes: 721
+}
+
+2024-11-09 10:52:24,296 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 1
+}
+pusher_stats {
+  uploaded_bytes: 721
+  total_bytes: 721
+}
+
+2024-11-09 10:52:26,001 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 1
+}
+pusher_stats {
+  uploaded_bytes: 721
+  total_bytes: 721
+}
+
+2024-11-09 10:52:26,774 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 5
+}
+pusher_stats {
+  uploaded_bytes: 721
+  total_bytes: 19338
+}
+
+2024-11-09 10:52:26,877 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 6
+}
+pusher_stats {
+  uploaded_bytes: 721
+  total_bytes: 19364
+}
+
+2024-11-09 10:52:26,979 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 6
+}
+pusher_stats {
+  uploaded_bytes: 14951
+  total_bytes: 19364
+}
+
+2024-11-09 10:52:27,081 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 6
+}
+pusher_stats {
+  uploaded_bytes: 19364
+  total_bytes: 19364
+}
+
+2024-11-09 10:52:27,183 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 6
+}
+pusher_stats {
+  uploaded_bytes: 19364
+  total_bytes: 19364
+}
+
+2024-11-09 10:52:27,285 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 6
+}
+pusher_stats {
+  uploaded_bytes: 19364
+  total_bytes: 19364
+}
+
+2024-11-09 10:52:27,388 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 6
+}
+pusher_stats {
+  uploaded_bytes: 19364
+  total_bytes: 19364
+}
+
+2024-11-09 10:52:27,490 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 6
+}
+pusher_stats {
+  uploaded_bytes: 19364
+  total_bytes: 19364
+}
+
+2024-11-09 10:52:27,678 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: file_counts {
+  wandb_count: 6
+}
+pusher_stats {
+  uploaded_bytes: 19364
+  total_bytes: 19364
+}
+
+2024-11-09 10:52:28,038 INFO    MainThread:1915 [wandb_run.py:_on_finish():2224] got exit ret: done: true
+exit_result {
+}
+file_counts {
+  wandb_count: 6
+}
+pusher_stats {
+  uploaded_bytes: 19364
+  total_bytes: 19364
+}
+local_info {
+}
+
+2024-11-09 10:52:29,143 INFO    MainThread:1915 [wandb_run.py:_footer_history_summary_info():3321] rendering history
+2024-11-09 10:52:29,144 INFO    MainThread:1915 [wandb_run.py:_footer_history_summary_info():3353] rendering summary
+2024-11-09 10:52:29,145 INFO    MainThread:1915 [wandb_run.py:_footer_sync_info():3277] logging synced files

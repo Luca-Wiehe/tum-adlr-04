@@ -1,0 +1,5 @@
+/tmp/ipykernel_1915/3797654065.py:10: UserWarning:
+The version_base parameter is not specified.
+Please specify a compatability version level, or None.
+Will assume defaults for version 1.1
+  with hydra.initialize(config_path=config_path):

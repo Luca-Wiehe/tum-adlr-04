@@ -1,0 +1,23 @@
+{
+    "os": "Linux-5.15.0-1070-gcp-x86_64-with-glibc2.31",
+    "python": "3.9.18",
+    "heartbeatAt": "2024-11-09T10:52:19.820977",
+    "startedAt": "2024-11-09T10:52:13.454286",
+    "docker": null,
+    "gpu": "Tesla T4",
+    "gpu_count": 1,
+    "cpu_count": 8,
+    "cuda": null,
+    "args": null,
+    "state": "running",
+    "program": "<python with no main file>",
+    "git": {
+        "remote": "https://github.com/Luca-Wiehe/tum-adlr-04.git",
+        "commit": "c122e16f2abe19c7e164e4645b939d39e53b3326"
+    },
+    "email": "luca@wiehe.com",
+    "root": "/home/luca_daniel/tum-adlr-04",
+    "host": "base-gpu",
+    "username": "luca_daniel",
+    "executable": "/home/luca_daniel/anaconda3/envs/robodiff/bin/python"
+}
