@@ -1,0 +1,6 @@
+/data/*
+/diffusion_policy/data
+/diffusion_policy/checkpoints
+__pycache__
+/diffusion_policy/robomimic/datasets
+.mp4
