@@ -10,7 +10,7 @@ from diffusion_policy.policy.base_lowdim_policy import BaseLowdimPolicy
 from diffusion_policy.model.diffusion.conditional_unet1d import ConditionalUnet1D
 from diffusion_policy.model.diffusion.mask_generator import LowdimMaskGenerator
 
-class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
+class DiffusionOursLowdimPolicy(BaseLowdimPolicy):
     def __init__(self, 
             model: ConditionalUnet1D,
             noise_scheduler: DDPMScheduler,

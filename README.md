@@ -67,33 +67,14 @@ cd <repo_root>
 python ./diffusion_policy/eval.py --checkpoint <ckpt_path> --output_dir <out_path>
 ```
 
-### Training Custom Models
-Training a custom model happens in `diffusion_policy/train.py`. It is required to setup a configuration file. Configuration files can be found in `<repo_root>/diffusion_policy/diffusion_policy/workspace/`. 
+### Training Our Custom Model
+To train our new model, execute the following code:
+```
+cd diffusion_policy
+python train.py --config-dir=./task_configurations --config-name=lift_config_ours.yaml training.seed=42 training.device=cuda:0 hydra.run.dir='data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}'
+```
 
-The authors of <it>Diffusion Policy</it> provide the following configuration files (among others that we will not make use of):
-- `base_workspace.py`: Superclass that manages saving/loading configurations of a workspace
-- `train_robomimic_image_workspace.py`: Workspace for Robomimic with images as a basis for trajectory generation
-- `train_robomimic_lowdim_workspace.py`: Workspace for Robomimic with robot configurations as a basis for trajectory generation
-
-In addition, we provide the following workspace to test the domain transfer of diffusion policy to new domains:
-- `some_workspace.py`: To be implemented
-
-#### Summary of Lowdim Workspace
-`TrainRobomimicLowdimWorkspace()` is the class of interest. The dataset inherits from `BaseLowdimDataset()`, a class that is part of `base_dataset.py`. The `BaseLowdimDataset()` specifies the observation format (`T, do`) and the action format (`T, da`).
-
-Observations, tensor dictionary `"obs":(B, To, Do)`
-- B = Batch size
-- To = Observation horizon
-- Do = Observation dimensionality
-
-Observation dimensionality varies according to the data set, e.g., object position, eef position, (HxW when using images).
-
-Actions, tensor dictionary `"action": (B, Ta, Da)`
-- B = Batch size
-- Ta = Action horizon
-- Da = Action dimensionality
-
-Actions dimensionality varies according to the data set e.g., 3D - axis angle configuration of eef for velocity control space.
+### Performing Inference on Our Custom Model
 
 ### Executing Hyperparameter Analysis
 One of our primary goals is to test how hyperparameter configurations differ across approaches. To explore hyperparameter configurations in an informed way, we provide code to conduct hyperparameter search.

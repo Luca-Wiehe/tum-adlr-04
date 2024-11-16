@@ -1,4 +1,4 @@
-_target_: diffusion_policy.workspace.train_diffusion_unet_lowdim_workspace.TrainDiffusionUnetLowdimWorkspace
+_target_: diffusion_policy.workspace.train_diffusion_ours_lowdim_workspace.TrainDiffusionOursLowdimWorkspace
 action_dim: ${task.action_dim}
 checkpoint:
   save_last_ckpt: true
@@ -53,7 +53,7 @@ multi_run:
 n_action_steps: 6
 n_latency_steps: 0
 n_obs_steps: 15
-name: train_diffusion_unet_lowdim
+name: train_diffusion_ours_lowdim
 obs_as_global_cond: true
 obs_as_local_cond: false
 obs_dim: ${task.obs_dim}
@@ -67,7 +67,7 @@ optimizer:
   weight_decay: 1.0e-06
 past_action_visible: false
 policy:
-  _target_: diffusion_policy.policy.diffusion_unet_lowdim_policy.DiffusionUnetLowdimPolicy
+  _target_: diffusion_policy.policy.diffusion_ours_lowdim_policy.DiffusionOursLowdimPolicy
   action_dim: ${action_dim}
   horizon: ${horizon}
   model:

@@ -4,3 +4,4 @@
 __pycache__
 /diffusion_policy/robomimic/datasets
 .mp4
+/outputs/
