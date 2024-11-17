@@ -4,7 +4,7 @@ checkpoint:
   save_last_ckpt: true
   save_last_snapshot: false
   topk:
-    format_str: epoch={epoch:04d}-test_mean_score={test_mean_score:.3f}.ckpt
+    format_str: diffusion_ours.ckpt
     k: 5
     mode: max
     monitor_key: test_mean_score
@@ -30,9 +30,9 @@ hydra:
   job:
     override_dirname: ${name}
   run:
-    dir: data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}
+    dir: ~/tum-adlr-04/data/hparams_2/
   sweep:
-    dir: data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}
+    dir: ~/tum-adlr-04/data/hparams_2/
     subdir: ${hydra.job.num}
 keypoint_dim: ${task.keypoint_dim}
 keypoint_visible_rate: 1.0
@@ -40,7 +40,7 @@ logging:
   group: null
   id: null
   mode: online
-  name: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}
+  name: ours
   project: diffusion_policy_debug
   resume: true
   tags:
@@ -48,11 +48,11 @@ logging:
   - ${task_name}
   - ${exp_name}
 multi_run:
-  run_dir: data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}
+  run_dir: ~/tum-adlr-04/data/hparams_2/
   wandb_name_base: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}
-n_action_steps: 6
+n_action_steps: 5
 n_latency_steps: 0
-n_obs_steps: 15
+n_obs_steps: 1
 name: train_diffusion_ours_lowdim
 obs_as_global_cond: true
 obs_as_local_cond: false
@@ -115,7 +115,7 @@ training:
   max_val_steps: null
   num_epochs: 15
   resume: true
-  rollout_every: 50
+  rollout_every: 10
   sample_every: 5
   seed: 42
   tqdm_interval_sec: 1.0

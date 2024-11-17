@@ -4,46 +4,48 @@ import subprocess
 import yaml
 
 # Constants
+N_HYPERPARAMETER_TESTS = 3
 MAX_HORIZON = 16
 TRAIN_EPISODES = 15  # Number of training episodes
 
 diffusion_policy_dir = os.path.expanduser("~/tum-adlr-04/diffusion_policy")
 
-training_config_dir = os.path.join(diffusion_policy_dir, "task_configurations")
-training_configuration_files = [
-    "lift_config_ours.yaml",
-    "lift_config_transformer.yaml",
-    "lift_config_unet.yaml",
-]
+# Configuration files and paths
+configurations = {
+    "ours": {
+        "training_config": os.path.join(diffusion_policy_dir, "task_configurations/lift_config_ours.yaml"),
+        "hyperparameter_config": os.path.join(diffusion_policy_dir, "diffusion_policy/config/train_diffusion_ours_lowdim_workspace.yaml"),
+        "checkpoint_name": "diffusion_ours.ckpt",
+    },
+    "transformer": {
+        "training_config": os.path.join(diffusion_policy_dir, "task_configurations/lift_config_transformer.yaml"),
+        "hyperparameter_config": os.path.join(diffusion_policy_dir, "diffusion_policy/config/train_diffusion_transformer_lowdim_workspace.yaml"),
+        "checkpoint_name": "diffusion_transformer.ckpt",
+    },
+    "unet": {
+        "training_config": os.path.join(diffusion_policy_dir, "task_configurations/lift_config_unet.yaml"),
+        "hyperparameter_config": os.path.join(diffusion_policy_dir, "diffusion_policy/config/train_diffusion_unet_lowdim_workspace.yaml"),
+        "checkpoint_name": "diffusion_unet.ckpt",
+    },
+}
 
-hyperparameter_config_dir = os.path.join(diffusion_policy_dir, "diffusion_policy/config")
-hyperparameter_files = [
-    "train_diffusion_ours_lowdim_workspace.yaml",
-    "train_diffusion_transformer_lowdim_workspace.yaml",
-    "train_diffusion_unet_lowdim_workspace.yaml",
-]
-
-hyperparameter_keys = [
-    "n_obs_steps",  # observation horizon
-    "n_action_steps",  # action horizon
-    "horizon",  # prediction horizon
-]
+out_dir = "~/tum-adlr-04/data/outputs/{}/"
 
 train_script_template = (
-    f"python {diffusion_policy_dir}/train.py --config-dir={training_config_dir} "
+    f"python {diffusion_policy_dir}/train.py --config-dir={os.path.join(diffusion_policy_dir, 'task_configurations')} "
     "--config-name=<training_configuration_file>.yaml "
     "training.seed=42 training.device=cuda:0 "
-    "hydra.run.dir='data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}'"
+    "hydra.run.dir=<output_dir>"
+)
+
+evaluation_script_template = (
+    f"python {diffusion_policy_dir}/eval.py "
+    "--checkpoint {} "
+    "--output_dir {}"
+    "training.device=cuda:0"
 )
 
 def update_yaml_file(file_path, updated_values):
-    """
-    Update a YAML file with new values.
-
-    Args:
-        file_path (str): Path to the YAML file.
-        updated_values (dict): A dictionary of keys and their new values.
-    """
     with open(file_path, "r") as file:
         config = yaml.safe_load(file)
 
@@ -58,57 +60,60 @@ def update_yaml_file(file_path, updated_values):
         yaml.safe_dump(config, file)
 
 def run_hyperparameter_tests():
-    """
-    Execute a series of training procedures by modifying hyperparameters and running the train script.
-    """
-    prediction_horizon = MAX_HORIZON  # Fixed prediction horizon
+    prediction_horizon = MAX_HORIZON
 
-    for _ in range(3):  # Define number of hyperparameter tests if needed
-        # Step 1: Randomly sample hyperparameters
+    for test_idx in range(N_HYPERPARAMETER_TESTS):
         observation_horizon = random.randint(1, prediction_horizon)
         action_horizon = random.randint(1, prediction_horizon)
 
-        updated_hyperparameters = {
-            "n_obs_steps": observation_horizon,
-            "n_action_steps": action_horizon,
-            "horizon": prediction_horizon,
-        }
+        """
+        for name, config in configurations.items():
+            # Update hyperparameter configurations
+            hyperparameter_file = config["hyperparameter_config"]
+            update_yaml_file(hyperparameter_file, {
+                "n_obs_steps": observation_horizon,
+                "n_action_steps": action_horizon,
+                "horizon": prediction_horizon,
+                "training.num_epochs": TRAIN_EPISODES,
+                "hydra.run.dir": out_dir.format(f"hparams_{test_idx}"),
+                "hydra.sweep.dir": out_dir.format(f"hparams_{test_idx}"),
+                "logging.name": name,
+                "multi_run.run_dir": out_dir.format(f"hparams_{test_idx}")
+            })
 
-        # Step 2: Update hyperparameter files
-        for hyperparameter_file in hyperparameter_files:
-            file_path = os.path.join(hyperparameter_config_dir, hyperparameter_file)
+            # Update training configurations
+            training_file = config["training_config"]
+            update_yaml_file(training_file, {
+                "training.num_epochs": TRAIN_EPISODES
+            })
 
-            # horizon hyperparameters
-            update_yaml_file(file_path, updated_hyperparameters)
-
-            # number of epochs
-            update_yaml_file(file_path, {"training.num_epochs": TRAIN_EPISODES})
-
-        # Step 3: Run the train script for each training configuration
-        for training_file in training_configuration_files:
-            # number of epochs
-            file_path = os.path.join(training_config_dir, training_file)
-            update_yaml_file(file_path, {"training.num_epochs": TRAIN_EPISODES})
-
+            # Run training script
             train_command = train_script_template.replace(
-                "<training_configuration_file>", training_file.split(".")[0]
+                "<training_configuration_file>", os.path.basename(training_file).split(".")[0]
             )
-
-            # Run the training script
+            train_command = train_command.replace(
+                "<output_dir>", f"data/outputs/hparams_{test_idx}/{name}"
+            )
             process = subprocess.run(train_command, shell=True)
-
-            # Ensure the process finishes successfully before proceeding
             if process.returncode != 0:
-                print(f"Error running training script for {training_file}")
+                print(f"Error running training script for {name}")
                 return
-            
-        # Step 4: Run evaluation for each of the latest checkpoints
+        """
 
-        # print 
+        # Evaluation
+        current_out_dir = os.path.expanduser(out_dir.format(f"hparams_{test_idx}"))
+
+        for name in configurations.keys():
+            checkpoint_path = os.path.join(current_out_dir, name, "checkpoints", "latest.ckpt")
+            eval_out_path = os.path.join(current_out_dir, name, "eval_out_")
+            eval_command = evaluation_script_template.format(checkpoint_path, eval_out_path)
+            process = subprocess.run(eval_command, shell=True)
+            if process.returncode != 0:
+                print(f"Error running evaluation script for {name}")
+                return
 
         print(f"Completed run with horizons: observation={observation_horizon}, "
               f"action={action_horizon}, prediction={prediction_horizon}")
-
 
 if __name__ == "__main__":
     run_hyperparameter_tests()
