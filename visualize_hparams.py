@@ -69,8 +69,8 @@ def hparams_grid_plot(data, grid_shape, output_path):
     grid = np.full(grid_shape, np.nan)
 
     for (n_obs, n_action), value in data.items():
-        if n_obs < grid_shape[0] and n_action < grid_shape[1]:
-            grid[n_action, n_obs] = value
+        if 1 <= n_obs <= grid_shape[0] and 1 <= n_action <= grid_shape[1]:
+            grid[n_action - 1, n_obs - 1] = value  # Shift indices by -1
 
     plt.figure(figsize=(8, 8))
     cmap = get_red_green_colormap()
@@ -81,8 +81,8 @@ def hparams_grid_plot(data, grid_shape, output_path):
     plt.title("Hyperparameter Grid Plot")
 
     # Add grid and annotations
-    plt.xticks(range(grid_shape[1]))
-    plt.yticks(range(grid_shape[0]))
+    plt.xticks(range(grid_shape[1]), labels=range(1, grid_shape[1] + 1))  # Start from 1
+    plt.yticks(range(grid_shape[0]), labels=range(1, grid_shape[0] + 1))  # Start from 1
     plt.grid(color="white", linestyle="--", linewidth=0.5)
     
     for (j, i), val in np.ndenumerate(grid):
