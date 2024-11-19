@@ -1,10 +1,10 @@
 _target_: diffusion_policy.workspace.train_diffusion_ours_lowdim_workspace.TrainDiffusionOursLowdimWorkspace
-action_dim: ${task.action_dim}
+action_dim: 10
 checkpoint:
   save_last_ckpt: true
   save_last_snapshot: false
   topk:
-    format_str: diffusion_ours.ckpt
+    format_str: epoch={epoch:04d}-test_mean_score={test_mean_score:.3f}.ckpt
     k: 5
     mode: max
     monitor_key: test_mean_score
@@ -14,9 +14,6 @@ dataloader:
   persistent_workers: false
   pin_memory: true
   shuffle: true
-defaults:
-- _self_
-- task: pusht_lowdim
 ema:
   _target_: diffusion_policy.model.diffusion.ema_model.EMAModel
   inv_gamma: 1.0
@@ -24,39 +21,31 @@ ema:
   min_value: 0.0
   power: 0.75
   update_after_step: 0
-exp_name: default
+exp_name: obs_global_rerun
 horizon: 16
-hydra:
-  job:
-    override_dirname: ${name}
-  run:
-    dir: /home/luca_daniel/tum-adlr-04/data/outputs/hparams_0/
-  sweep:
-    dir: /home/luca_daniel/tum-adlr-04/data/outputs/hparams_0/
-    subdir: ${hydra.job.num}
-keypoint_dim: ${task.keypoint_dim}
+keypoint_dim: 3
 keypoint_visible_rate: 1.0
 logging:
   group: null
   id: null
   mode: online
-  name: ours
+  name: train_diffusion_ours_lowdim_lift_lowdim
   project: diffusion_policy_debug
   resume: true
   tags:
-  - ${name}
-  - ${task_name}
-  - ${exp_name}
+  - train_diffusion_ours_lowdim
+  - lift_lowdim
+  - obs_global_rerun
 multi_run:
-  run_dir: /home/luca_daniel/tum-adlr-04/data/outputs/hparams_0/
-  wandb_name_base: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}
-n_action_steps: 1
+  run_dir: data/outputs/2023.02.23/19.52.27_train_diffusion_ours_lowdim_lift_lowdim
+  wandb_name_base: train_diffusion_ours_lowdim_lift_lowdim
+n_action_steps: 8
 n_latency_steps: 0
-n_obs_steps: 9
+n_obs_steps: 2
 name: train_diffusion_ours_lowdim
 obs_as_global_cond: true
 obs_as_local_cond: false
-obs_dim: ${task.obs_dim}
+obs_dim: 19
 optimizer:
   _target_: torch.optim.AdamW
   betas:
@@ -68,8 +57,8 @@ optimizer:
 past_action_visible: false
 policy:
   _target_: diffusion_policy.policy.diffusion_ours_lowdim_policy.DiffusionOursLowdimPolicy
-  action_dim: ${action_dim}
-  horizon: ${horizon}
+  action_dim: 10
+  horizon: 16
   model:
     _target_: diffusion_policy.model.diffusion.conditional_unet1d.ConditionalUnet1D
     cond_predict_scale: true
@@ -78,15 +67,13 @@ policy:
     - 256
     - 512
     - 1024
-    global_cond_dim: '${eval: ${task.obs_dim}*${n_obs_steps} if ${obs_as_global_cond}
-      else None}'
-    input_dim: '${eval: ${task.action_dim} if ${obs_as_local_cond} or ${obs_as_global_cond}
-      else ${task.obs_dim} + ${task.action_dim}}'
+    global_cond_dim: 38
+    input_dim: 10
     kernel_size: 5
-    local_cond_dim: '${eval: ${task.obs_dim} if ${obs_as_local_cond} else None}'
+    local_cond_dim: null
     n_groups: 8
-  n_action_steps: ${eval:'${n_action_steps}+${n_latency_steps}'}
-  n_obs_steps: ${n_obs_steps}
+  n_action_steps: 8
+  n_obs_steps: 2
   noise_scheduler:
     _target_: diffusers.schedulers.scheduling_ddpm.DDPMScheduler
     beta_end: 0.02
@@ -98,12 +85,69 @@ policy:
     variance_type: fixed_small
   num_inference_steps: 100
   oa_step_convention: true
-  obs_as_global_cond: ${obs_as_global_cond}
-  obs_as_local_cond: ${obs_as_local_cond}
-  obs_dim: ${obs_dim}
-  pred_action_steps_only: ${pred_action_steps_only}
+  obs_as_global_cond: true
+  obs_as_local_cond: false
+  obs_dim: 19
+  pred_action_steps_only: false
 pred_action_steps_only: false
-task_name: ${task.name}
+task:
+  abs_action: true
+  action_dim: 10
+  dataset:
+    _target_: diffusion_policy.dataset.robomimic_replay_lowdim_dataset.RobomimicReplayLowdimDataset
+    abs_action: true
+    dataset_path: data/robomimic/datasets/lift/ph/low_dim_abs.hdf5
+    horizon: 16
+    obs_keys:
+    - object
+    - robot0_eef_pos
+    - robot0_eef_quat
+    - robot0_gripper_qpos
+    pad_after: 7
+    pad_before: 1
+    rotation_rep: rotation_6d
+    seed: 42
+    use_legacy_normalizer: false
+    val_ratio: 0.02
+  dataset_path: data/robomimic/datasets/lift/ph/low_dim_abs.hdf5
+  dataset_type: ph
+  env_runner:
+    _target_: diffusion_policy.env_runner.robomimic_lowdim_runner.RobomimicLowdimRunner
+    abs_action: true
+    crf: 22
+    dataset_path: data/robomimic/datasets/lift/ph/low_dim_abs.hdf5
+    fps: 10
+    max_steps: 400
+    n_action_steps: 8
+    n_envs: 28
+    n_latency_steps: 0
+    n_obs_steps: 2
+    n_test: 50
+    n_test_vis: 3
+    n_train: 6
+    n_train_vis: 2
+    obs_keys:
+    - object
+    - robot0_eef_pos
+    - robot0_eef_quat
+    - robot0_gripper_qpos
+    past_action: false
+    render_hw:
+    - 128
+    - 128
+    test_start_seed: 100000
+    tqdm_interval_sec: 1.0
+    train_start_idx: 0
+  keypoint_dim: 3
+  name: lift_lowdim
+  obs_dim: 19
+  obs_keys:
+  - object
+  - robot0_eef_pos
+  - robot0_eef_quat
+  - robot0_gripper_qpos
+  task_name: lift
+task_name: lift_lowdim
 training:
   checkpoint_every: 10
   debug: false

@@ -4,12 +4,28 @@ import torch
 import torch.nn as nn
 
 from diffusion_policy.model.diffusion.our_model_mlp_components import (
-    DownsampleMLP, UpsampleMLP, MLPBlock
+   DownsampleMLP, UpsampleMLP, MLPBlock
 )
 from diffusion_policy.model.diffusion.positional_embedding import SinusoidalPosEmb
 
 logger = logging.getLogger(__name__)
 
+# class MLPDiffusion(nn.Module):
+#     def __init__(self, input_dim, output_dim):
+#         super().__init__()
+#         self.flatten = nn.Flatten()
+#         self.stack = nn.Sequential(
+#             nn.Linear(input_dim, 512),
+#             nn.Mish(),
+#             nn.Linear(512, 512),
+#             nn.Mish(),
+#             nn.Linear(512, output_dim)
+#         )
+
+#     def forward(self, o):
+#         o = self.flatten(o)
+#         logits = self.stack(o)
+#         return logits
 
 class ConditionalResidualBlockMLP(nn.Module):
     def __init__(self, inp_dim, out_dim, cond_dim, n_groups=8, cond_predict_scale=False):

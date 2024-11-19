@@ -30,9 +30,9 @@ hydra:
   job:
     override_dirname: ${name}
   run:
-    dir: ~/tum-adlr-04/data/hparams_2/
+    dir: /home/luca_daniel/tum-adlr-04/data/outputs/hparams_1/
   sweep:
-    dir: ~/tum-adlr-04/data/hparams_2/
+    dir: /home/luca_daniel/tum-adlr-04/data/outputs/hparams_1/
     subdir: ${hydra.job.num}
 keypoint_visible_rate: 1.0
 logging:
@@ -47,11 +47,11 @@ logging:
   - ${task_name}
   - ${exp_name}
 multi_run:
-  run_dir: ~/tum-adlr-04/data/hparams_2/
+  run_dir: /home/luca_daniel/tum-adlr-04/data/outputs/hparams_1/
   wandb_name_base: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}
-n_action_steps: 5
+n_action_steps: 9
 n_latency_steps: 0
-n_obs_steps: 1
+n_obs_steps: 16
 name: train_diffusion_transformer_lowdim
 obs_as_cond: true
 obs_dim: ${task.obs_dim}

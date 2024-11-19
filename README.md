@@ -70,8 +70,7 @@ python ./diffusion_policy/eval.py --checkpoint <ckpt_path> --output_dir <out_pat
 ### Training Our Custom Model
 To train our new model, execute the following code:
 ```
-cd diffusion_policy
-python train.py --config-dir=./task_configurations --config-name=lift_config_ours.yaml training.seed=42 training.device=cuda:0 hydra.run.dir='data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}'
+python diffusion_policy/train.py --config-dir=./diffusion_policy/task_configurations --config-name=lift_config_ours.yaml training.seed=42 training.device=cuda:0 hydra.run.dir='data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}'
 ```
 
 ### Performing Inference on Our Custom Model

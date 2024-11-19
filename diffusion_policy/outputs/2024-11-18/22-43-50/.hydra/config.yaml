@@ -60,7 +60,7 @@ policy:
   action_dim: 10
   horizon: 16
   model:
-    _target_: diffusion_policy.model.diffusion.our_mlp_model_for_diffusion.ConditionalUnetMLP
+    _target_: diffusion_policy.model.diffusion.conditional_unet1d.ConditionalUnet1D
     cond_predict_scale: true
     diffusion_step_embed_dim: 256
     down_dims:
@@ -96,7 +96,7 @@ task:
   dataset:
     _target_: diffusion_policy.dataset.robomimic_replay_lowdim_dataset.RobomimicReplayLowdimDataset
     abs_action: true
-    dataset_path: robomimic/datasets/lift/ph/low_dim_abs.hdf5
+    dataset_path: tum-adlr-04/data/robomimic/datasets/lift/ph/low_dim_abs.hdf5
     horizon: 16
     obs_keys:
     - object
@@ -109,13 +109,13 @@ task:
     seed: 42
     use_legacy_normalizer: false
     val_ratio: 0.02
-  dataset_path: robomimic/datasets/lift/ph/low_dim_abs.hdf5
+  dataset_path: tum-adlr-04/data/robomimic/datasets/lift/ph/low_dim_abs.hdf5
   dataset_type: ph
   env_runner:
     _target_: diffusion_policy.env_runner.robomimic_lowdim_runner.RobomimicLowdimRunner
     abs_action: true
     crf: 22
-    dataset_path: robomimic/datasets/lift/ph/low_dim_abs.hdf5
+    dataset_path: tum-adlr-04/data/robomimic/datasets/lift/ph/low_dim_abs.hdf5
     fps: 10
     max_steps: 400
     n_action_steps: 8

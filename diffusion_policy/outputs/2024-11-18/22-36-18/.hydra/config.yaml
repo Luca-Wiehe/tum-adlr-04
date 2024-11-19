@@ -1,4 +1,4 @@
-_target_: diffusion_policy.workspace.train_diffusion_ours_lowdim_workspace.TrainDiffusionOursLowdimWorkspace
+_target_: diffusion_policy.workspace.train_diffusion_unet_lowdim_workspace.TrainDiffusionUnetLowdimWorkspace
 action_dim: 10
 checkpoint:
   save_last_ckpt: true
@@ -29,20 +29,20 @@ logging:
   group: null
   id: null
   mode: online
-  name: train_diffusion_ours_lowdim_lift_lowdim
+  name: 2023.02.23-19.52.27_train_diffusion_unet_lowdim_lift_lowdim
   project: diffusion_policy_debug
   resume: true
   tags:
-  - train_diffusion_ours_lowdim
+  - train_diffusion_unet_lowdim
   - lift_lowdim
   - obs_global_rerun
 multi_run:
-  run_dir: data/outputs/2023.02.23/19.52.27_train_diffusion_ours_lowdim_lift_lowdim
-  wandb_name_base: train_diffusion_ours_lowdim_lift_lowdim
+  run_dir: data/outputs/2023.02.23/19.52.27_train_diffusion_unet_lowdim_lift_lowdim
+  wandb_name_base: 2023.02.23-19.52.27_train_diffusion_unet_lowdim_lift_lowdim
 n_action_steps: 8
 n_latency_steps: 0
 n_obs_steps: 2
-name: train_diffusion_ours_lowdim
+name: train_diffusion_unet_lowdim
 obs_as_global_cond: true
 obs_as_local_cond: false
 obs_dim: 19
@@ -56,11 +56,11 @@ optimizer:
   weight_decay: 1.0e-06
 past_action_visible: false
 policy:
-  _target_: diffusion_policy.policy.diffusion_ours_lowdim_policy.DiffusionOursLowdimPolicy
+  _target_: diffusion_policy.policy.diffusion_unet_lowdim_policy.DiffusionUnetLowdimPolicy
   action_dim: 10
   horizon: 16
   model:
-    _target_: diffusion_policy.model.diffusion.our_mlp_model_for_diffusion.ConditionalUnetMLP
+    _target_: diffusion_policy.model.diffusion.conditional_unet1d.ConditionalUnet1D
     cond_predict_scale: true
     diffusion_step_embed_dim: 256
     down_dims:
@@ -96,7 +96,7 @@ task:
   dataset:
     _target_: diffusion_policy.dataset.robomimic_replay_lowdim_dataset.RobomimicReplayLowdimDataset
     abs_action: true
-    dataset_path: robomimic/datasets/lift/ph/low_dim_abs.hdf5
+    dataset_path: data/robomimic/datasets/lift/ph/low_dim_abs.hdf5
     horizon: 16
     obs_keys:
     - object
@@ -109,13 +109,13 @@ task:
     seed: 42
     use_legacy_normalizer: false
     val_ratio: 0.02
-  dataset_path: robomimic/datasets/lift/ph/low_dim_abs.hdf5
+  dataset_path: data/robomimic/datasets/lift/ph/low_dim_abs.hdf5
   dataset_type: ph
   env_runner:
     _target_: diffusion_policy.env_runner.robomimic_lowdim_runner.RobomimicLowdimRunner
     abs_action: true
     crf: 22
-    dataset_path: robomimic/datasets/lift/ph/low_dim_abs.hdf5
+    dataset_path: data/robomimic/datasets/lift/ph/low_dim_abs.hdf5
     fps: 10
     max_steps: 400
     n_action_steps: 8
