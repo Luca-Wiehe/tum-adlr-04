@@ -3,8 +3,12 @@ import random
 import subprocess
 import yaml
 
+from skopt import Optimizer
+from skopt.space import Integer
+
 # Constants
-N_HYPERPARAMETER_TESTS = 5
+N_TOTAL_TESTS = 3
+N_RANDOM_TESTS = 3
 MAX_HORIZON = 16
 TRAIN_EPISODES = 15  # Number of training episodes
 
@@ -53,6 +57,7 @@ def update_yaml_file(file_path, updated_values):
         current = config
         for k in keys[:-1]:
             current = current.get(k, {})
+
         current[keys[-1]] = value
 
     with open(file_path, "w") as file:
@@ -63,77 +68,103 @@ def save_hyperparameters_to_file(hyperparameters, file_path):
         for key, value in hyperparameters.items():
             file.write(f"{key}: {value}\n")
 
-def run_hyperparameter_tests():
-    prediction_horizon = MAX_HORIZON
+def get_random_hparams():
+    observation_horizon = random.randint(1, MAX_HORIZON)
+    action_horizon = random.randint(1, MAX_HORIZON)
+    return {
+        "n_obs_steps": observation_horizon,
+        "n_action_steps": action_horizon,
+        "horizon": MAX_HORIZON,
+        "training.num_epochs": TRAIN_EPISODES,
+    }
 
-    # Check for existing directories and determine starting index
+def get_bayesian_hparams(optimizer):
+    bayesian_hparams = optimizer.ask()
+    return {
+        "n_obs_steps": bayesian_hparams[0],
+        "n_action_steps": bayesian_hparams[1],
+        "horizon": MAX_HORIZON,
+        "training.num_epochs": TRAIN_EPISODES
+    }
+
+def run_training_and_evaluation(test_idx, hyperparameters, optimizer=None):
+    current_out_dir = os.path.expanduser(out_dir.format(f"hparams_{test_idx}"))
+    os.makedirs(current_out_dir, exist_ok=True)
+
+    hyperparam_file_path = os.path.join(current_out_dir, "hyperparameters.txt")
+    save_hyperparameters_to_file(hyperparameters, hyperparam_file_path)
+
+    for name, config in configurations.items():
+        hyperparameter_file = config["hyperparameter_config"]
+        update_yaml_file(hyperparameter_file, {
+            **hyperparameters,
+            "hydra.run.dir": current_out_dir,
+            "hydra.sweep.dir": current_out_dir,
+            "logging.name": name,
+            "multi_run.run_dir": current_out_dir,
+        })
+
+        training_file = config["training_config"]
+        update_yaml_file(training_file, {
+            "training.num_epochs": TRAIN_EPISODES,
+        })
+
+        train_command = train_script_template.replace(
+            "<training_configuration_file>", os.path.basename(training_file).split(".")[0]
+        )
+        train_command = train_command.replace(
+            "<output_dir>", os.path.join(current_out_dir, name)
+        )
+        process = subprocess.run(train_command, shell=True)
+        if process.returncode != 0:
+            print(f"Error running training script for {name}")
+            return False
+
+    for name in configurations.keys():
+        checkpoint_path = os.path.join(current_out_dir, name, "checkpoints", "latest.ckpt")
+        eval_out_path = os.path.join(current_out_dir, name, "eval_out")
+        eval_command = evaluation_script_template.format(checkpoint_path, eval_out_path)
+        process = subprocess.run(eval_command, shell=True)
+        if process.returncode != 0:
+            print(f"Error running evaluation script for {name}")
+            return False
+
+    print(f"Completed run with {hyperparameters}")
+    return True
+
+def run_hyperparameter_tests():
+    optimizer = Optimizer(
+        dimensions=[Integer(1, MAX_HORIZON), Integer(1, MAX_HORIZON)],
+        random_state=42,
+        base_estimator="GP"
+    )
+
+    evaluated_params = []
+    evaluated_scores = []
+
     base_out_dir = os.path.expanduser(out_dir.format(""))
     os.makedirs(base_out_dir, exist_ok=True)
     existing_dirs = [d for d in os.listdir(base_out_dir) if d.startswith("hparams_")]
-    existing_indices = [
-        int(d.split("_")[1]) for d in existing_dirs if d.split("_")[1].isdigit()
-    ]
-    starting_index = max(existing_indices, default=-1) + 1
+    starting_index = len(existing_dirs)
 
-    for test_idx in range(starting_index, starting_index + N_HYPERPARAMETER_TESTS):
-        observation_horizon = random.randint(1, prediction_horizon)
-        action_horizon = random.randint(1, prediction_horizon)
+    for test_idx in range(starting_index, N_TOTAL_TESTS):
+        if test_idx < N_RANDOM_TESTS:
+            hyperparameters = get_random_hparams()
+            print(f"[INFO] Random Hyperparameters: {hyperparameters}")
+        else:
+            hyperparameters = get_bayesian_hparams(optimizer, evaluated_params, evaluated_scores)
+            print(f"[INFO] Bayesian Hyperparameters: {hyperparameters}")
 
-        hyperparameters = {
-            "n_obs_steps": observation_horizon,
-            "n_action_steps": action_horizon,
-            "horizon": prediction_horizon,
-            "training.num_epochs": TRAIN_EPISODES,
-        }
+        success = run_training_and_evaluation(test_idx, hyperparameters)
+        if not success:
+            print(f"Test {test_idx} failed. Skipping.")
+            continue
 
-        current_out_dir = os.path.expanduser(out_dir.format(f"hparams_{test_idx}"))
-        os.makedirs(current_out_dir, exist_ok=True)
-
-        # Save hyperparameters to a single .txt file
-        hyperparam_file_path = os.path.join(current_out_dir, "hyperparameters.txt")
-        save_hyperparameters_to_file(hyperparameters, hyperparam_file_path)
-
-        for name, config in configurations.items():
-            # Update hyperparameter configurations
-            hyperparameter_file = config["hyperparameter_config"]
-            update_yaml_file(hyperparameter_file, {
-                **hyperparameters,
-                "hydra.run.dir": current_out_dir,
-                "hydra.sweep.dir": current_out_dir,
-                "logging.name": name,
-                "multi_run.run_dir": current_out_dir,
-            })
-
-            # Update training configurations
-            training_file = config["training_config"]
-            update_yaml_file(training_file, {
-                "training.num_epochs": TRAIN_EPISODES,
-            })
-
-            # Run training script
-            train_command = train_script_template.replace(
-                "<training_configuration_file>", os.path.basename(training_file).split(".")[0]
-            )
-            train_command = train_command.replace(
-                "<output_dir>", os.path.join(current_out_dir, name)
-            )
-            process = subprocess.run(train_command, shell=True)
-            if process.returncode != 0:
-                print(f"Error running training script for {name}")
-                return
-
-        # Evaluation
-        for name in configurations.keys():
-            checkpoint_path = os.path.join(current_out_dir, name, "checkpoints", "latest.ckpt")
-            eval_out_path = os.path.join(current_out_dir, name, "eval_out")
-            eval_command = evaluation_script_template.format(checkpoint_path, eval_out_path)
-            process = subprocess.run(eval_command, shell=True)
-            if process.returncode != 0:
-                print(f"Error running evaluation script for {name}")
-                return
-
-        print(f"Completed run with horizons: observation={observation_horizon}, "
-              f"action={action_horizon}, prediction={prediction_horizon}")
+        # Assume a dummy score (replace with real evaluation score)
+        score = random.uniform(0, 1)
+        evaluated_params.append([hyperparameters["n_obs_steps"], hyperparameters["n_action_steps"]])
+        evaluated_scores.append(-score)
+        optimizer.tell([hyperparameters["n_obs_steps"], hyperparameters["n_action_steps"]], -score)
 
 if __name__ == "__main__":
     run_hyperparameter_tests()
