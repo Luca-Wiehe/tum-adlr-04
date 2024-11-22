@@ -5,12 +5,13 @@ import yaml
 
 from skopt import Optimizer
 from skopt.space import Integer
+import json 
 
 # Constants
-N_TOTAL_TESTS = 3
-N_RANDOM_TESTS = 3
+N_TOTAL_TESTS = 50
+N_RANDOM_TESTS = 10
 MAX_HORIZON = 16
-TRAIN_EPISODES = 15  # Number of training episodes
+TRAIN_EPISODES = 100  # Number of training episodes
 
 diffusion_policy_dir = os.path.expanduser("~/tum-adlr-04/diffusion_policy")
 
@@ -57,6 +58,9 @@ def update_yaml_file(file_path, updated_values):
         current = config
         for k in keys[:-1]:
             current = current.get(k, {})
+
+        if not isinstance(value, (str, int, float, list, dict)):
+            value = str(value)
 
         current[keys[-1]] = value
 
@@ -129,7 +133,6 @@ def run_training_and_evaluation(test_idx, hyperparameters, optimizer=None):
             print(f"Error running evaluation script for {name}")
             return False
 
-    print(f"Completed run with {hyperparameters}")
     return True
 
 def run_hyperparameter_tests():
@@ -147,24 +150,64 @@ def run_hyperparameter_tests():
     existing_dirs = [d for d in os.listdir(base_out_dir) if d.startswith("hparams_")]
     starting_index = len(existing_dirs)
 
+    # Load previously executed tests
+    for i, dir_name in enumerate(existing_dirs):
+        try:
+            eval_log_path = os.path.join(base_out_dir, dir_name, "unet/eval_out/eval_log.json")
+            hparams_path = os.path.join(base_out_dir, dir_name, "hyperparameters.txt")
+            
+            # Parse evaluation score
+            with open(eval_log_path, "r") as f:
+                eval_data = json.load(f)
+            score = eval_data.get("test/mean_score", None)
+            if score is None:
+                print(f"Skipping {dir_name} due to missing score.")
+                continue
+
+            # Parse hyperparameters
+            with open(hparams_path, "r") as f:
+                hparams = {}
+                for line in f:
+                    key, value = line.strip().split(": ")
+                    hparams[key] = int(value)
+
+            # Update optimizer and records
+            params = [hparams["n_obs_steps"], hparams["n_action_steps"]]
+            evaluated_params.append(params)
+            evaluated_scores.append(-score)
+            optimizer.tell(params, -score)
+        except Exception as e:
+            print(f"Error processing {dir_name}: {e}")
+
+    # Continue with new tests
     for test_idx in range(starting_index, N_TOTAL_TESTS):
         if test_idx < N_RANDOM_TESTS:
             hyperparameters = get_random_hparams()
-            print(f"[INFO] Random Hyperparameters: {hyperparameters}")
         else:
-            hyperparameters = get_bayesian_hparams(optimizer, evaluated_params, evaluated_scores)
-            print(f"[INFO] Bayesian Hyperparameters: {hyperparameters}")
+            hyperparameters = get_bayesian_hparams(optimizer)
 
         success = run_training_and_evaluation(test_idx, hyperparameters)
         if not success:
             print(f"Test {test_idx} failed. Skipping.")
             continue
 
-        # Assume a dummy score (replace with real evaluation score)
-        score = random.uniform(0, 1)
-        evaluated_params.append([hyperparameters["n_obs_steps"], hyperparameters["n_action_steps"]])
+        # Extract the actual score
+        eval_log_path = base_out_dir.format(f"hparams_{test_idx}/unet/eval_out/eval_log.json")
+        try:
+            with open(eval_log_path, "r") as f:
+                eval_data = json.load(f)
+            score = eval_data.get("test/mean_score", None)
+            if score is None:
+                print(f"Test {test_idx} has no score. Skipping.")
+                continue
+        except Exception as e:
+            print(f"Error reading evaluation log for test {test_idx}: {e}")
+            continue
+
+        params = [hyperparameters["n_obs_steps"], hyperparameters["n_action_steps"]]
+        evaluated_params.append(params)
         evaluated_scores.append(-score)
-        optimizer.tell([hyperparameters["n_obs_steps"], hyperparameters["n_action_steps"]], -score)
+        optimizer.tell(params, -score)
 
 if __name__ == "__main__":
     run_hyperparameter_tests()
