@@ -10,7 +10,7 @@ from diffusion_policy.policy.base_lowdim_policy import BaseLowdimPolicy
 from diffusion_policy.model.diffusion.conditional_unet1d import ConditionalUnet1D
 from diffusion_policy.model.diffusion.mask_generator import LowdimMaskGenerator
 
-class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
+class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
     def __init__(self, 
             model: ConditionalUnet1D,
             noise_scheduler: DDPMScheduler,
@@ -96,14 +96,18 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
         return trajectory
 
 
+    # TODO(Luca - 06): Info, not todo. This is where the conditioning parameters are passed.
+    # The new entry for 'goal' now needs to be integrated
     def predict_action(self, obs_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
-        obs_dict: must include "obs" key
+        obs_dict: must include "obs" key AND "goal" key
         result: must include "action" key
         """
+        assert 'goal' in obs_dict
         assert 'obs' in obs_dict
         assert 'past_action' not in obs_dict # not implemented yet
         nobs = self.normalizer['obs'].normalize(obs_dict['obs'])
+        # TODO(Luca): Apply normalization of goal condition here
         B, _, Do = nobs.shape
         To = self.n_obs_steps
         assert Do == self.obs_dim
@@ -117,23 +121,29 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
         # handle different ways of passing observation
         local_cond = None
         global_cond = None
+
         if self.obs_as_local_cond:
             # condition through local feature
             # all zero except first To timesteps
+            # TODO(Luca): Adjust shape to include an additional goal entry
             local_cond = torch.zeros(size=(B,T,Do), device=device, dtype=dtype)
             local_cond[:,:To] = nobs[:,:To]
+            # TODO(Luca): Adjust this shape as well
             shape = (B, T, Da)
             cond_data = torch.zeros(size=shape, device=device, dtype=dtype)
             cond_mask = torch.zeros_like(cond_data, dtype=torch.bool)
         elif self.obs_as_global_cond:
             # condition throught global feature
+            # TODO(Luca): Adjust shape to include an additional goal entry
             global_cond = nobs[:,:To].reshape(nobs.shape[0], -1)
+            # TODO(Luca): Adjust this shape as well
             shape = (B, T, Da)
             if self.pred_action_steps_only:
                 shape = (B, self.n_action_steps, Da)
             cond_data = torch.zeros(size=shape, device=device, dtype=dtype)
             cond_mask = torch.zeros_like(cond_data, dtype=torch.bool)
         else:
+            # TODO(Luca): I don't think that impainting is applied for our experiments. 
             # condition through impainting
             shape = (B, T, Da+Do)
             cond_data = torch.zeros(size=shape, device=device, dtype=dtype)

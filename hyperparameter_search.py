@@ -73,8 +73,8 @@ def save_hyperparameters_to_file(hyperparameters, file_path):
             file.write(f"{key}: {value}\n")
 
 def get_random_hparams():
-    observation_horizon = random.randint(1, MAX_HORIZON)
-    action_horizon = random.randint(1, MAX_HORIZON)
+    observation_horizon = random.randint(1, 5)
+    action_horizon = random.randint(1, 5)
     return {
         "n_obs_steps": observation_horizon,
         "n_action_steps": action_horizon,
@@ -137,7 +137,7 @@ def run_training_and_evaluation(test_idx, hyperparameters, optimizer=None):
 
 def run_hyperparameter_tests():
     optimizer = Optimizer(
-        dimensions=[Integer(1, MAX_HORIZON), Integer(1, MAX_HORIZON)],
+        dimensions=[Integer(1, 5), Integer(1, 5)],
         random_state=42,
         base_estimator="GP"
     )

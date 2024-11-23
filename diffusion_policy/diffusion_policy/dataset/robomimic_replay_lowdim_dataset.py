@@ -45,6 +45,11 @@ class RobomimicReplayLowdimDataset(BaseLowdimDataset):
             demos = file['data']
             for i in tqdm(range(len(demos)), desc="Loading hdf5 to ReplayBuffer"):
                 demo = demos[f'demo_{i}']
+
+                # TODO(Luca - 04) Info, not todo. This is where we still have the full observation
+                # dictionary. demo['obs'] is passed to _data_to_obs where observations are also pre-processed
+                # to the final dictionary. _data_to_obs is therefore the best location to add the goal to the
+                # dictionary
                 episode = _data_to_obs(
                     raw_obs=demo['obs'],
                     raw_actions=demo['actions'][:].astype(np.float32),
@@ -139,6 +144,11 @@ def normalizer_from_stat(stat):
     )
     
 def _data_to_obs(raw_obs, raw_actions, obs_keys, abs_action, rotation_transformer):
+    # TODO(Luca - 05): Extract the goal here and save it to a variable.
+    # Create as many duplicates as there are observations to simply let the 
+    # sampler do its work without additional changes
+    goal = None
+
     obs = np.concatenate([
         raw_obs[key] for key in obs_keys
     ], axis=-1).astype(np.float32)
@@ -161,8 +171,10 @@ def _data_to_obs(raw_obs, raw_actions, obs_keys, abs_action, rotation_transforme
         if is_dual_arm:
             raw_actions = raw_actions.reshape(-1,20)
     
+    # TODO(Luca - 06): Done. Attach the final observation with key 'goal' here
     data = {
         'obs': obs,
-        'action': raw_actions
+        'action': raw_actions,
+        'goal': goal
     }
     return data

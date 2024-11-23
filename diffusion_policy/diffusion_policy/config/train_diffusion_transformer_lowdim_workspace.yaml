@@ -49,9 +49,9 @@ logging:
 multi_run:
   run_dir: /home/luca_daniel/tum-adlr-04/data/outputs/hparams_8/
   wandb_name_base: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}
-n_action_steps: 7
+n_action_steps: 1
 n_latency_steps: 0
-n_obs_steps: 7
+n_obs_steps: 4
 name: train_diffusion_transformer_lowdim
 obs_as_cond: true
 obs_dim: ${task.obs_dim}
