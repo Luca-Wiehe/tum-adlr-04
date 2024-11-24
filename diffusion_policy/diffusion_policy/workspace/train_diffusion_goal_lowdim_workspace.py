@@ -22,7 +22,7 @@ import shutil
 
 from diffusion_policy.common.pytorch_util import dict_apply, optimizer_to
 from diffusion_policy.workspace.base_workspace import BaseWorkspace
-from diffusion_policy.policy.diffusion_unet_lowdim_policy import DiffusionUnetLowdimPolicy
+from diffusion_policy.policy.diffusion_goal_lowdim_policy import DiffusionGoalLowdimPolicy
 from diffusion_policy.dataset.base_dataset import BaseLowdimDataset
 from diffusion_policy.env_runner.base_lowdim_runner import BaseLowdimRunner
 from diffusion_policy.common.checkpoint_util import TopKCheckpointManager
@@ -46,10 +46,10 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
         random.seed(seed)
 
         # configure model
-        self.model: DiffusionUnetLowdimPolicy
+        self.model: DiffusionGoalLowdimPolicy
         self.model = hydra.utils.instantiate(cfg.policy)
 
-        self.ema_model: DiffusionUnetLowdimPolicy = None
+        self.ema_model: DiffusionGoalLowdimPolicy = None
         if cfg.training.use_ema:
             self.ema_model = copy.deepcopy(self.model)
 
@@ -73,7 +73,7 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
         # configure dataset
         dataset: BaseLowdimDataset
 
-        # TODO(Luca - 03): This is where the dataset gets instantiated from cfg.task.dataset
+        # TODO(Luca - 03): Info, not todo. This is where the dataset gets instantiated from cfg.task.dataset
         # For now, the config file points to the lift task, i.e. RobomimicReplayLowdimDataset
         dataset = hydra.utils.instantiate(cfg.task.dataset)
         assert isinstance(dataset, BaseLowdimDataset)
@@ -160,7 +160,7 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
                 # ========= train for this epoch ==========
                 train_losses = list()
                 # TODO(Luca - 02): Info, not todo. As you can see, we iterate through this train_dataloader.
-                # There is no modification possible in the for loop. We therefore need to include the goal 
+                # There is no modification possible in the for-loop. We therefore need to include the goal 
                 # directly in each sample of the train_dataloader
                 with tqdm.tqdm(train_dataloader, desc=f"Training epoch {self.epoch}", 
                         leave=False, mininterval=cfg.training.tqdm_interval_sec) as tepoch:
@@ -314,7 +314,7 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
     config_path=str(pathlib.Path(__file__).parent.parent.joinpath("config")), 
     config_name=pathlib.Path(__file__).stem)
 def main(cfg):
-    workspace = TrainDiffusionUnetLowdimWorkspace(cfg)
+    workspace = TrainDiffusionGoalLowdimWorkspace(cfg)
     workspace.run()
 
 if __name__ == "__main__":

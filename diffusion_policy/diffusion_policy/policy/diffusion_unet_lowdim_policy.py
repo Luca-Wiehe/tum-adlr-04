@@ -182,6 +182,7 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
     def compute_loss(self, batch):
         # normalize input
         assert 'valid_mask' not in batch
+
         nbatch = self.normalizer.normalize(batch)
         obs = nbatch['obs']
         action = nbatch['action']

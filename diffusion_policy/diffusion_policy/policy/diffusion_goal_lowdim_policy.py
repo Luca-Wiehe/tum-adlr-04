@@ -96,7 +96,7 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
         return trajectory
 
 
-    # TODO(Luca - 06): Info, not todo. This is where the conditioning parameters are passed.
+    # TODO(Luca - 08): Info, not todo. This is where the conditioning parameters are passed.
     # The new entry for 'goal' now needs to be integrated
     def predict_action(self, obs_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
@@ -107,7 +107,7 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
         assert 'obs' in obs_dict
         assert 'past_action' not in obs_dict # not implemented yet
         nobs = self.normalizer['obs'].normalize(obs_dict['obs'])
-        # TODO(Luca): Apply normalization of goal condition here
+        # TODO(Luca - 09): Apply normalization of goal condition here
         B, _, Do = nobs.shape
         To = self.n_obs_steps
         assert Do == self.obs_dim
@@ -125,25 +125,25 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
         if self.obs_as_local_cond:
             # condition through local feature
             # all zero except first To timesteps
-            # TODO(Luca): Adjust shape to include an additional goal entry
+            # TODO(Luca - 10.1): Adjust shape to include an additional goal entry
             local_cond = torch.zeros(size=(B,T,Do), device=device, dtype=dtype)
             local_cond[:,:To] = nobs[:,:To]
-            # TODO(Luca): Adjust this shape as well
+            # TODO(Luca - 10.2): Adjust this shape as well
             shape = (B, T, Da)
             cond_data = torch.zeros(size=shape, device=device, dtype=dtype)
             cond_mask = torch.zeros_like(cond_data, dtype=torch.bool)
         elif self.obs_as_global_cond:
             # condition throught global feature
-            # TODO(Luca): Adjust shape to include an additional goal entry
+            # TODO(Luca - 10.3): Adjust shape to include an additional goal entry
             global_cond = nobs[:,:To].reshape(nobs.shape[0], -1)
-            # TODO(Luca): Adjust this shape as well
+            # TODO(Luca - 10.4): Adjust this shape as well
             shape = (B, T, Da)
             if self.pred_action_steps_only:
                 shape = (B, self.n_action_steps, Da)
             cond_data = torch.zeros(size=shape, device=device, dtype=dtype)
             cond_mask = torch.zeros_like(cond_data, dtype=torch.bool)
         else:
-            # TODO(Luca): I don't think that impainting is applied for our experiments. 
+            # TODO(Luca - 10.5): I don't think that impainting is applied for our experiments. 
             # condition through impainting
             shape = (B, T, Da+Do)
             cond_data = torch.zeros(size=shape, device=device, dtype=dtype)
@@ -192,6 +192,10 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
     def compute_loss(self, batch):
         # normalize input
         assert 'valid_mask' not in batch
+
+        # TODO(Luca - 07): Currently, an error is thrown here. I don't know why exactly, apparently the normalizer
+        # doesn't work with the new 'goal' attribute in the batch. Please run the following line in the terminal to reproduce the error:
+        # python diffusion_policy/train.py --config-dir=./diffusion_policy/task_configurations --config-name=lift_config_goal.yaml training.seed=42
         nbatch = self.normalizer.normalize(batch)
         obs = nbatch['obs']
         action = nbatch['action']

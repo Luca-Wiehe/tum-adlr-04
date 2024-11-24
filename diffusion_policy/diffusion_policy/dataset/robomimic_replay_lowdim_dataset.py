@@ -43,13 +43,13 @@ class RobomimicReplayLowdimDataset(BaseLowdimDataset):
         replay_buffer = ReplayBuffer.create_empty_numpy()
         with h5py.File(dataset_path) as file:
             demos = file['data']
+            
             for i in tqdm(range(len(demos)), desc="Loading hdf5 to ReplayBuffer"):
+                # TODO(Luca - 04) Info, not todo. This is where we still have the full observation dict. Demo
+                # is a full trajectory. demo['obs'] is the observation array and the final observation is the goal
+                # that we are interested in.
                 demo = demos[f'demo_{i}']
 
-                # TODO(Luca - 04) Info, not todo. This is where we still have the full observation
-                # dictionary. demo['obs'] is passed to _data_to_obs where observations are also pre-processed
-                # to the final dictionary. _data_to_obs is therefore the best location to add the goal to the
-                # dictionary
                 episode = _data_to_obs(
                     raw_obs=demo['obs'],
                     raw_actions=demo['actions'][:].astype(np.float32),
@@ -144,14 +144,15 @@ def normalizer_from_stat(stat):
     )
     
 def _data_to_obs(raw_obs, raw_actions, obs_keys, abs_action, rotation_transformer):
-    # TODO(Luca - 05): Extract the goal here and save it to a variable.
-    # Create as many duplicates as there are observations to simply let the 
-    # sampler do its work without additional changes
-    goal = None
-
+    # obs.shape = [n_observations, 19]
     obs = np.concatenate([
         raw_obs[key] for key in obs_keys
     ], axis=-1).astype(np.float32)
+
+    # TODO(Luca - 05): Done. Extract the goal here and save it to a variable.
+    # goal.shape = [n_observations, 19] but along the 19 dimension we always
+    # have the same entry, i.e. the goal state / final observation
+    goal = np.tile(obs[-1:], (obs.shape[0], 1))
 
     if abs_action:
         is_dual_arm = False
