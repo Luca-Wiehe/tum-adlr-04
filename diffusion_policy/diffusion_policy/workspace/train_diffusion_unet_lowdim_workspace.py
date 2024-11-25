@@ -164,8 +164,6 @@ class TrainDiffusionUnetLowdimWorkspace(BaseWorkspace):
                         if train_sampling_batch is None:
                             train_sampling_batch = batch
 
-                        print(f"[INFO] batch.keys(): {batch.keys()}")
-
                         # compute loss
                         raw_loss = self.model.compute_loss(batch)
                         loss = raw_loss / cfg.training.gradient_accumulate_every
@@ -245,7 +243,7 @@ class TrainDiffusionUnetLowdimWorkspace(BaseWorkspace):
                         batch = train_sampling_batch
                         obs_dict = {'obs': batch['obs']}
                         gt_action = batch['action']
-                        
+
                         result = policy.predict_action(obs_dict)
                         if cfg.pred_action_steps_only:
                             pred_action = result['action']

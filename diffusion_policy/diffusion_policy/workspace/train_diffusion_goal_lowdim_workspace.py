@@ -243,6 +243,7 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
                             step_log['val_loss'] = val_loss
 
                 # run diffusion sampling on a training batch
+                print("[INFO] Checking diffusion sampling!")
                 if (self.epoch % cfg.training.sample_every) == 0:
                     with torch.no_grad():
                         # sample trajectory from training set, and evaluate difference
@@ -255,11 +256,13 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
                         # a subset of operations that doesn't contain the overall goal
                         obs_dict = {
                             'obs': batch['obs'],
-                            'goal': batch['goal']
                         }
+                        goal_dict = batch['goal'][-1] # D. added | extracting the last obsrvation
+
                         gt_action = batch['action']
                         
-                        result = policy.predict_action(obs_dict)
+                        print(f"[INFO] Appending the following goal_dict: {goal_dict}")
+                        result = policy.predict_action(obs_dict, goal_dict) #D. added , pass last observarion to prediction method
                         if cfg.pred_action_steps_only:
                             pred_action = result['action']
                             start = cfg.n_obs_steps - 1

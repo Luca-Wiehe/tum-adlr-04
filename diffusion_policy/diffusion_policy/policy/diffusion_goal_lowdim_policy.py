@@ -98,18 +98,39 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
 
     # TODO(Luca - 08): Info, not todo. This is where the conditioning parameters are passed.
     # The new entry for 'goal' now needs to be integrated
-    def predict_action(self, obs_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def predict_action(self, 
+                       obs_dict: Dict[str, torch.Tensor],
+                       #(D. added start)________________________________
+                       goal_dict: Dict[str, torch.Tensor] = None
+                       #(D. added end)__________________________________                       
+                       ) -> Dict[str, torch.Tensor]:
         """
         obs_dict: must include "obs" key AND "goal" key
         result: must include "action" key
         """
-        assert 'goal' in obs_dict
+        
         assert 'obs' in obs_dict
         assert 'past_action' not in obs_dict # not implemented yet
         nobs = self.normalizer['obs'].normalize(obs_dict['obs'])
+        
         # TODO(Luca - 09): Apply normalization of goal condition here
+        if goal_dict is not None:
+            print("[INFO] Predicting action using goal")
+            assert 'obs' in goal_dict # D. added
+            nobs_goal = self.normalizer['obs'].normalize(goal_dict['obs']) # D. added
+        else:
+            print("[INFO] No goal_dict found!")
+        #D. added | Batch and Dimension of observation for the goal ramains the same.
+
         B, _, Do = nobs.shape
         To = self.n_obs_steps
+
+        
+        Tg = 1  # D. added | for now we can give a fix tuple of the last three observations as "goal". 
+                # We might pass it as a parameter later. Tg "goal tuple length" 
+                # might be in conflict with horizon T in other iteration loops. We gotta check.
+                
+
         assert Do == self.obs_dim
         T = self.horizon
         Da = self.action_dim
@@ -120,7 +141,10 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
 
         # handle different ways of passing observation
         local_cond = None
-        global_cond = None
+        global_cond = None        
+        goal_cond = None # D. added | We will use goal_cond in both cases for local_cond and global_cond
+                         # thus we will simply append the goal to the cond_data array.
+                         # Addressing 10.1 to 10.4 by just adding goal_cond to local_cond ang global_cond
 
         if self.obs_as_local_cond:
             # condition through local feature
@@ -128,14 +152,19 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
             # TODO(Luca - 10.1): Adjust shape to include an additional goal entry
             local_cond = torch.zeros(size=(B,T,Do), device=device, dtype=dtype)
             local_cond[:,:To] = nobs[:,:To]
-            # TODO(Luca - 10.2): Adjust this shape as well
+            if goal_dict is not None:
+                local_cond[:, T-Tg+1: ] =  nobs_goal # D. added | extending local observation array with the goal
+                                                     # array depending on "Goal horizon Length"
+            # TODO(Luca - 10.2): Adjust this shape as       
             shape = (B, T, Da)
             cond_data = torch.zeros(size=shape, device=device, dtype=dtype)
             cond_mask = torch.zeros_like(cond_data, dtype=torch.bool)
         elif self.obs_as_global_cond:
             # condition throught global feature
-            # TODO(Luca - 10.3): Adjust shape to include an additional goal entry
+            # TODO(Luca - 10.3): Adjust shape to include an additional goal entry            
             global_cond = nobs[:,:To].reshape(nobs.shape[0], -1)
+            if goal_dict is not None:
+                global_cond.extend(nobs_goal.reshape(nobs_goal[0], -1)) # D. added
             # TODO(Luca - 10.4): Adjust this shape as well
             shape = (B, T, Da)
             if self.pred_action_steps_only:
@@ -150,6 +179,8 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
             cond_mask = torch.zeros_like(cond_data, dtype=torch.bool)
             cond_data[:,:To,Da:] = nobs[:,:To]
             cond_mask[:,:To,Da:] = True
+
+        
 
         # run sampling
         nsample = self.conditional_sample(
@@ -196,9 +227,12 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
         # TODO(Luca - 07): Currently, an error is thrown here. I don't know why exactly, apparently the normalizer
         # doesn't work with the new 'goal' attribute in the batch. Please run the following line in the terminal to reproduce the error:
         # python diffusion_policy/train.py --config-dir=./diffusion_policy/task_configurations --config-name=lift_config_goal.yaml training.seed=42
-        nbatch = self.normalizer.normalize(batch)
-        obs = nbatch['obs']
-        action = nbatch['action']
+        #nbatch = self.normalizer.normalize(batch)
+        #obs = nbatch['obs']
+        #action = nbatch['action']
+
+        obs = self.normalizer['obs'].normalize(batch['obs'])
+        action = self.normalizer['action'].normalize(batch['action'])
 
         # handle different ways of passing observation
         local_cond = None

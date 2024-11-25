@@ -284,6 +284,8 @@ class RobomimicLowdimRunner(BaseLowdimRunner):
 
                 # run policy
                 with torch.no_grad():
+                    # TODO(Luca - 11): We need to add the goal here as well
+                    print("[INFO] Predicting action in robomimic_lowdim_runner!")
                     action_dict = policy.predict_action(obs_dict)
 
                 # device_transfer
