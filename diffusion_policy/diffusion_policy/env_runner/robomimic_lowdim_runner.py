@@ -272,6 +272,9 @@ class RobomimicLowdimRunner(BaseLowdimRunner):
                     # handle n_latency_steps by discarding the last n_latency_steps
                     'obs': obs[:,:self.n_obs_steps].astype(np.float32)
                 }
+
+                goal_dict = None
+
                 if self.past_action and (past_action is not None):
                     # TODO: not tested
                     np_obs_dict['past_action'] = past_action[
@@ -284,9 +287,9 @@ class RobomimicLowdimRunner(BaseLowdimRunner):
 
                 # run policy
                 with torch.no_grad():
-                    # TODO(Luca - 11): We need to add the goal here as well
+                    # TODO(Luca - 01): We need to add the goal here as well
                     print("[INFO] Predicting action in robomimic_lowdim_runner!")
-                    action_dict = policy.predict_action(obs_dict)
+                    action_dict = policy.predict_action(obs_dict, goal_dict)
 
                 # device_transfer
                 np_action_dict = dict_apply(action_dict,

@@ -45,9 +45,6 @@ class RobomimicReplayLowdimDataset(BaseLowdimDataset):
             demos = file['data']
             
             for i in tqdm(range(len(demos)), desc="Loading hdf5 to ReplayBuffer"):
-                # TODO(Luca - 04) Info, not todo. This is where we still have the full observation dict. Demo
-                # is a full trajectory. demo['obs'] is the observation array and the final observation is the goal
-                # that we are interested in.
                 demo = demos[f'demo_{i}']
 
                 episode = _data_to_obs(
@@ -149,9 +146,6 @@ def _data_to_obs(raw_obs, raw_actions, obs_keys, abs_action, rotation_transforme
         raw_obs[key] for key in obs_keys
     ], axis=-1).astype(np.float32)
 
-    # TODO(Luca - 05): Done. Extract the goal here and save it to a variable.
-    # goal.shape = [n_observations, 19] but along the 19 dimension we always
-    # have the same entry, i.e. the goal state / final observation
     goal = np.tile(obs[-1:], (obs.shape[0], 1))
 
     if abs_action:
@@ -172,7 +166,6 @@ def _data_to_obs(raw_obs, raw_actions, obs_keys, abs_action, rotation_transforme
         if is_dual_arm:
             raw_actions = raw_actions.reshape(-1,20)
     
-    # TODO(Luca - 06): Done. Attach the final observation with key 'goal' here
     data = {
         'obs': obs,
         'action': raw_actions,

@@ -95,9 +95,6 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
 
         return trajectory
 
-
-    # TODO(Luca - 08): Info, not todo. This is where the conditioning parameters are passed.
-    # The new entry for 'goal' now needs to be integrated
     def predict_action(self, 
                        obs_dict: Dict[str, torch.Tensor],
                        #(D. added start)________________________________
@@ -113,7 +110,6 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
         assert 'past_action' not in obs_dict # not implemented yet
         nobs = self.normalizer['obs'].normalize(obs_dict['obs'])
         
-        # TODO(Luca - 09): Apply normalization of goal condition here
         if goal_dict is not None:
             print("[INFO] Predicting action using goal")
             assert 'obs' in goal_dict # D. added
@@ -180,8 +176,6 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
             cond_data[:,:To,Da:] = nobs[:,:To]
             cond_mask[:,:To,Da:] = True
 
-        
-
         # run sampling
         nsample = self.conditional_sample(
             cond_data, 
@@ -224,34 +218,54 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
         # normalize input
         assert 'valid_mask' not in batch
 
-        # TODO(Luca - 07): Currently, an error is thrown here. I don't know why exactly, apparently the normalizer
-        # doesn't work with the new 'goal' attribute in the batch. Please run the following line in the terminal to reproduce the error:
-        # python diffusion_policy/train.py --config-dir=./diffusion_policy/task_configurations --config-name=lift_config_goal.yaml training.seed=42
         #nbatch = self.normalizer.normalize(batch)
         #obs = nbatch['obs']
         #action = nbatch['action']
 
         obs = self.normalizer['obs'].normalize(batch['obs'])
+        print(f"[INFO] obs.shape: {obs.shape}")
         action = self.normalizer['action'].normalize(batch['action'])
+        if batch['goal'] is not None:
+            goal = self.normalizer['obs'].normalize(batch['goal']) # normalize as if the goal was an observation
+            goal = batch['goal'][:, -1:, :] # select last state (all of them are duplicates)
+            print(f"[INFO] goal.shape: {goal.shape}")
 
         # handle different ways of passing observation
         local_cond = None
         global_cond = None
         trajectory = action
         if self.obs_as_local_cond:
+            print("[INFO] Local Conditioning")
             # zero out observations after n_obs_steps
             local_cond = obs
-            local_cond[:,self.n_obs_steps:,:] = 0
+
+            if goal is not None:
+                local_cond = torch.cat([goal, local_cond], dim=1)
+                local_cond[:,self.n_obs_steps+1:,:] = 0 # mask out one observation later because of goal
+            else:
+                local_cond[:,self.n_obs_steps:,:] = 0
         elif self.obs_as_global_cond:
-            global_cond = obs[:,:self.n_obs_steps,:].reshape(
+            print("[INFO] Global Conditioning")
+            global_cond = obs[:, :self.n_obs_steps, :].reshape(
                 obs.shape[0], -1)
+            
+            print(f"[INFO] Global Conditioning before adaptation: {global_cond.shape}")
+
+            # TODO(Luca - 01) The following adaptation causes a dimension mismatch if we don't leave away an observation
+            if goal is not None:
+                # Append goal to global_cond as the first entry
+                goal_flat = goal.reshape(goal.shape[0], -1)  # Flatten goal to match dimensions
+                global_cond = torch.cat([goal_flat, global_cond], dim=1)
+
+            print(f"[INFO] Global Conditioning after adaptation: {global_cond.shape}")
+
             if self.pred_action_steps_only:
                 To = self.n_obs_steps
                 start = To
                 if self.oa_step_convention:
                     start = To - 1
                 end = start + self.n_action_steps
-                trajectory = action[:,start:end]
+                trajectory = action[:, start:end]
         else:
             trajectory = torch.cat([action, obs], dim=-1)
 

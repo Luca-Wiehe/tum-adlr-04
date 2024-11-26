@@ -73,8 +73,6 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
         # configure dataset
         dataset: BaseLowdimDataset
 
-        # TODO(Luca - 03): Info, not todo. This is where the dataset gets instantiated from cfg.task.dataset
-        # For now, the config file points to the lift task, i.e. RobomimicReplayLowdimDataset
         dataset = hydra.utils.instantiate(cfg.task.dataset)
         assert isinstance(dataset, BaseLowdimDataset)
         train_dataloader = DataLoader(dataset, **cfg.dataloader)
@@ -159,9 +157,7 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
                 step_log = dict()
                 # ========= train for this epoch ==========
                 train_losses = list()
-                # TODO(Luca - 02): Info, not todo. As you can see, we iterate through this train_dataloader.
-                # There is no modification possible in the for-loop. We therefore need to include the goal 
-                # directly in each sample of the train_dataloader
+
                 with tqdm.tqdm(train_dataloader, desc=f"Training epoch {self.epoch}", 
                         leave=False, mininterval=cfg.training.tqdm_interval_sec) as tepoch:
                     for batch_idx, batch in enumerate(tepoch):
@@ -171,6 +167,7 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
                             train_sampling_batch = batch
 
                         # compute loss
+                        # TODO(Luca - 00) Compute Loss directly uses the batch. We need to adapt loss computation!
                         raw_loss = self.model.compute_loss(batch)
                         loss = raw_loss / cfg.training.gradient_accumulate_every
                         loss.backward()
@@ -243,17 +240,11 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
                             step_log['val_loss'] = val_loss
 
                 # run diffusion sampling on a training batch
-                print("[INFO] Checking diffusion sampling!")
                 if (self.epoch % cfg.training.sample_every) == 0:
                     with torch.no_grad():
                         # sample trajectory from training set, and evaluate difference
                         batch = train_sampling_batch
 
-                        # TODO(Luca - 01): Info, not todo. We need to pass the goal to this obs_dict. Right now, there is no key 'goal'
-                        # in the batch. To do this, jump to the next todo and see where the dataloader is called
-                        # This requires us to find the goal state for each obs_dict in the batch separately
-                        # Using the last observation of the subsequence won't do the job because we only consider 
-                        # a subset of operations that doesn't contain the overall goal
                         obs_dict = {
                             'obs': batch['obs'],
                         }
