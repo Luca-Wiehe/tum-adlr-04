@@ -78,6 +78,11 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
         train_dataloader = DataLoader(dataset, **cfg.dataloader)
         normalizer = dataset.get_normalizer()
 
+        #print(f"[INFO] Data sample keys: {dataset.__getitem__(1).keys()} \n")
+        #print(f"[INFO] obs shape: {dataset.__getitem__(1)['obs'].shape}")
+        #print(f"[INFO] action shape: {dataset.__getitem__(1)['action'].shape}")
+        #print(f"[INFO] goal shape: {dataset.__getitem__(1)['goal'].shape} \n")
+
         # configure validation dataset
         val_dataset = dataset.get_validation_dataset()
         val_dataloader = DataLoader(val_dataset, **cfg.val_dataloader)
@@ -248,12 +253,13 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
                         obs_dict = {
                             'obs': batch['obs'],
                         }
-                        goal_dict = batch['goal'][-1] # D. added | extracting the last obsrvation
+                        goal_dict = batch['goal'][-1] # Daniel - | extracting the last obsrvation
 
                         gt_action = batch['action']
                         
-                        print(f"[INFO] Appending the following goal_dict: {goal_dict}")
-                        result = policy.predict_action(obs_dict, goal_dict) #D. added , pass last observarion to prediction method
+                        #print(f"[INFO] Appending the following goal_dict: {goal_dict}")
+                        result = policy.predict_action(obs_dict) #, goal_dict) #Daniel - , pass last observarion to prediction method
+                        #print("[Info]: Predict action in training phase")
                         if cfg.pred_action_steps_only:
                             pred_action = result['action']
                             start = cfg.n_obs_steps - 1

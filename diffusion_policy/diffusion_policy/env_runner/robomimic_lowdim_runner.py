@@ -289,7 +289,7 @@ class RobomimicLowdimRunner(BaseLowdimRunner):
                 with torch.no_grad():
                     # TODO(Luca - 01): We need to add the goal here as well
                     print("[INFO] Predicting action in robomimic_lowdim_runner!")
-                    action_dict = policy.predict_action(obs_dict, goal_dict)
+                    action_dict = policy.predict_action(obs_dict)
 
                 # device_transfer
                 np_action_dict = dict_apply(action_dict,

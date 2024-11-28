@@ -182,9 +182,10 @@ class ConditionalUnet1D(nn.Module):
         output: (B,T,input_dim)
         """
         sample = einops.rearrange(sample, 'b h t -> b t h')
-
+        #print(f"[Info] sample size: {sample.shape}")
         # 1. time
         timesteps = timestep
+        #print(f"[Info] timestep size: {timestep.shape}")
         if not torch.is_tensor(timesteps):
             # TODO: this requires sync between CPU and GPU. So try to pass timesteps as tensors if you can
             timesteps = torch.tensor([timesteps], dtype=torch.long, device=sample.device)
@@ -194,12 +195,13 @@ class ConditionalUnet1D(nn.Module):
         timesteps = timesteps.expand(sample.shape[0])
 
         global_feature = self.diffusion_step_encoder(timesteps)
-
+        #print(f"[Info] Golbal feature: {global_feature.shape}")
+        #print(f"[Info] Golbal_cond: {global_cond.shape}")
         if global_cond is not None:
             global_feature = torch.cat([
                 global_feature, global_cond
             ], axis=-1)
-        
+        #print(f"[Info] Global_features after cat: {global_feature.shape}")
         # encode local features
         h_local = list()
         if local_cond is not None:
@@ -236,6 +238,8 @@ class ConditionalUnet1D(nn.Module):
             x = upsample(x)
 
         x = self.final_conv(x)
+
+        print(f"[INFO] x.shape after last layer: {x.shape}")
 
         x = einops.rearrange(x, 'b t h -> b h t')
         return x

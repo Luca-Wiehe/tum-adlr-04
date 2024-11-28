@@ -67,7 +67,7 @@ policy:
     - 256
     - 512
     - 1024
-    global_cond_dim: 38
+    global_cond_dim: 57 #38
     input_dim: 10
     kernel_size: 5
     local_cond_dim: null

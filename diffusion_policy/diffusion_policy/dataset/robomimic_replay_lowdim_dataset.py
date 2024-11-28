@@ -142,6 +142,7 @@ def normalizer_from_stat(stat):
     
 def _data_to_obs(raw_obs, raw_actions, obs_keys, abs_action, rotation_transformer):
     # obs.shape = [n_observations, 19]
+
     obs = np.concatenate([
         raw_obs[key] for key in obs_keys
     ], axis=-1).astype(np.float32)
@@ -169,6 +170,6 @@ def _data_to_obs(raw_obs, raw_actions, obs_keys, abs_action, rotation_transforme
     data = {
         'obs': obs,
         'action': raw_actions,
-        'goal': goal
+        'goal': goal # Luca
     }
     return data

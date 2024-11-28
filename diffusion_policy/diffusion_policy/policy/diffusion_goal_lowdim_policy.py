@@ -97,9 +97,8 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
 
     def predict_action(self, 
                        obs_dict: Dict[str, torch.Tensor],
-                       #(D. added start)________________________________
-                       goal_dict: Dict[str, torch.Tensor] = None
-                       #(D. added end)__________________________________                       
+                       in_training = False
+                       #goal_dict: Dict[str, torch.Tensor] = None              
                        ) -> Dict[str, torch.Tensor]:
         """
         obs_dict: must include "obs" key AND "goal" key
@@ -110,19 +109,20 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
         assert 'past_action' not in obs_dict # not implemented yet
         nobs = self.normalizer['obs'].normalize(obs_dict['obs'])
         
-        if goal_dict is not None:
-            print("[INFO] Predicting action using goal")
-            assert 'obs' in goal_dict # D. added
-            nobs_goal = self.normalizer['obs'].normalize(goal_dict['obs']) # D. added
-        else:
-            print("[INFO] No goal_dict found!")
-        #D. added | Batch and Dimension of observation for the goal ramains the same.
+        # if goal_dict is not None:
+        #     print("[INFO] Predicting action using goal")
+        #     assert 'obs' in goal_dict # Daniel -
+        #     nobs_goal = self.normalizer['obs'].normalize(goal_dict['obs']) # Daniel -
+        # else:
+        #     print("[INFO] No goal_dict found!")
+        #Daniel - | Batch and Dimension of observation for the goal ramains the same.
 
         B, _, Do = nobs.shape
         To = self.n_obs_steps
 
+        #print(f'[Info] nobs shape: {nobs.shape}')
         
-        Tg = 1  # D. added | for now we can give a fix tuple of the last three observations as "goal". 
+        Tg = 1  # Daniel - | for now we can give a fix tuple of the last one observations as "goal". 
                 # We might pass it as a parameter later. Tg "goal tuple length" 
                 # might be in conflict with horizon T in other iteration loops. We gotta check.
                 
@@ -138,7 +138,7 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
         # handle different ways of passing observation
         local_cond = None
         global_cond = None        
-        goal_cond = None # D. added | We will use goal_cond in both cases for local_cond and global_cond
+        #goal_cond = None # Daniel - | We will use goal_cond in both cases for local_cond and global_cond
                          # thus we will simply append the goal to the cond_data array.
                          # Addressing 10.1 to 10.4 by just adding goal_cond to local_cond ang global_cond
 
@@ -148,8 +148,16 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
             # TODO(Luca - 10.1): Adjust shape to include an additional goal entry
             local_cond = torch.zeros(size=(B,T,Do), device=device, dtype=dtype)
             local_cond[:,:To] = nobs[:,:To]
-            if goal_dict is not None:
-                local_cond[:, T-Tg+1: ] =  nobs_goal # D. added | extending local observation array with the goal
+            #print(f"[Info] obs shape : {nobs.shape}") 
+
+            # Daniel added    
+            # if in_training:    
+            #     local_cond[:,:To + 1] = nobs[:, T]
+            #     print("Last observation attached obs(T)") 
+            #     print(f"[Info] obs.shape in pred: {nobs.shape}")
+
+            #if goal_dict is not None:
+            #    local_cond[:, T-Tg+1: ] =  nobs_goal # Daniel - | extending local observation array with the goal
                                                      # array depending on "Goal horizon Length"
             # TODO(Luca - 10.2): Adjust this shape as       
             shape = (B, T, Da)
@@ -159,8 +167,13 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
             # condition throught global feature
             # TODO(Luca - 10.3): Adjust shape to include an additional goal entry            
             global_cond = nobs[:,:To].reshape(nobs.shape[0], -1)
-            if goal_dict is not None:
-                global_cond.extend(nobs_goal.reshape(nobs_goal[0], -1)) # D. added
+            # Daniel added
+            # if in_training:
+            #     global_cond.append(nobs[:,T].reshape(nobs.shape[0], -1))
+            #     print("Last observation attached obs(T)") 
+            #     print(f"[Info] obs.shape in pred: {nobs.shape}")   
+            #if goal_dict is not None:
+            #    global_cond.extend(nobs_goal.reshape(nobs_goal[0], -1)) # Daniel -
             # TODO(Luca - 10.4): Adjust this shape as well
             shape = (B, T, Da)
             if self.pred_action_steps_only:
@@ -217,50 +230,65 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
     def compute_loss(self, batch):
         # normalize input
         assert 'valid_mask' not in batch
-
-        #nbatch = self.normalizer.normalize(batch)
-        #obs = nbatch['obs']
-        #action = nbatch['action']
+        
+        # nbatch = self.normalizer.normalize(batch)
+        # obs = nbatch['obs']
+        # action = nbatch['action']
 
         obs = self.normalizer['obs'].normalize(batch['obs'])
-        print(f"[INFO] obs.shape: {obs.shape}")
+        #print(f"[INFO] obs.shape_: {obs.shape}")
+
         action = self.normalizer['action'].normalize(batch['action'])
+
         if batch['goal'] is not None:
             goal = self.normalizer['obs'].normalize(batch['goal']) # normalize as if the goal was an observation
             goal = batch['goal'][:, -1:, :] # select last state (all of them are duplicates)
-            print(f"[INFO] goal.shape: {goal.shape}")
-
+            #print(f"[INFO] goal.shape: {goal.shape}")
+            print("[INFO] Using goal conditioning")
         # handle different ways of passing observation
         local_cond = None
         global_cond = None
         trajectory = action
+        
         if self.obs_as_local_cond:
-            print("[INFO] Local Conditioning")
+            #print("[INFO] Local Conditioning")
             # zero out observations after n_obs_steps
             local_cond = obs
-
+            #print(f"[INFO] local_cond shape: {local_cond.shape}")
             if goal is not None:
-                local_cond = torch.cat([goal, local_cond], dim=1)
-                local_cond[:,self.n_obs_steps+1:,:] = 0 # mask out one observation later because of goal
+                #print("[Info] Local + Conditioning")
+                #local_cond = torch.cat([goal, local_cond], dim=1)
+                local_cond[:,self.n_obs_steps:,:] = 0 # mask out one observation later because of goal
+                local_cond[:, -1:, :] = goal         # attaching goal to the end of the horizon
             else:
                 local_cond[:,self.n_obs_steps:,:] = 0
         elif self.obs_as_global_cond:
-            print("[INFO] Global Conditioning")
-            global_cond = obs[:, :self.n_obs_steps, :].reshape(
-                obs.shape[0], -1)
+            #print("[INFO] Global Conditioning")
+
+            global_cond = obs[:, :self.n_obs_steps, :].reshape(obs.shape[0], -1)
             
-            print(f"[INFO] Global Conditioning before adaptation: {global_cond.shape}")
 
             # TODO(Luca - 01) The following adaptation causes a dimension mismatch if we don't leave away an observation
             if goal is not None:
-                # Append goal to global_cond as the first entry
-                goal_flat = goal.reshape(goal.shape[0], -1)  # Flatten goal to match dimensions
-                global_cond = torch.cat([goal_flat, global_cond], dim=1)
+                #print("[Info] Global + goal Conditioning")
+            #Append goal to global_cond as the first entry
+                #goal_flat = goal.reshape(goal.shape[0], -1)  # Flatten goal to match dimensions
+                #global_cond = torch.cat([goal_flat, global_cond], dim=1)
+                global_cond = obs[:, :self.n_obs_steps, :]
+                #print(f"[INFO] Global Conditioning before adaptation: {global_cond.shape}")
+                #print(f"[INFO] Goal before usage: {goal.shape}")
+                global_cond = torch.cat([global_cond, goal], dim=1).reshape(obs.shape[0], -1)
+                
 
-            print(f"[INFO] Global Conditioning after adaptation: {global_cond.shape}")
+            #print(f"[INFO] Global Conditioning before adaptation: {global_cond.shape}")
+
+           # print(f"[INFO] Global Conditioning after adaptation: {global_cond.shape}")
 
             if self.pred_action_steps_only:
-                To = self.n_obs_steps
+                if goal is not None:
+                    To = self.n_obs_steps + 1
+                else:    
+                    To = self.n_obs_steps
                 start = To
                 if self.oa_step_convention:
                     start = To - 1
@@ -278,6 +306,7 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
         # Sample noise that we'll add to the images
         noise = torch.randn(trajectory.shape, device=trajectory.device)
         bsz = trajectory.shape[0]
+        #print(f"[Info] bzs shape: {bsz}")
         # Sample a random timestep for each image
         timesteps = torch.randint(
             0, self.noise_scheduler.config.num_train_timesteps, 
@@ -290,9 +319,8 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
         
         # compute loss mask
         loss_mask = ~condition_mask
-
-        # apply conditioning
-        noisy_trajectory[condition_mask] = trajectory[condition_mask]
+    
+        noisy_trajectory[condition_mask] = trajectory[condition_mask] # Note: Nothing is masked at the moment
         
         # Predict the noise residual
         pred = self.model(noisy_trajectory, timesteps, 
