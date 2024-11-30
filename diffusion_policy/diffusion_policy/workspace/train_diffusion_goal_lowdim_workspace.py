@@ -253,12 +253,12 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
                         obs_dict = {
                             'obs': batch['obs'],
                         }
-                        goal_dict = batch['goal'][-1] # Daniel - | extracting the last obsrvation
+                        goal_dict = batch['goal']# Daniel - | extracting the last obsrvation
 
                         gt_action = batch['action']
                         
                         #print(f"[INFO] Appending the following goal_dict: {goal_dict}")
-                        result = policy.predict_action(obs_dict) #, goal_dict) #Daniel - , pass last observarion to prediction method
+                        result = policy.predict_action(obs_dict, goal_dict) #Daniel - , pass last observarion to prediction method
                         #print("[Info]: Predict action in training phase")
                         if cfg.pred_action_steps_only:
                             pred_action = result['action']

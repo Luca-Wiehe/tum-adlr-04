@@ -51,18 +51,23 @@ class ConditionalResidualBlock1D(nn.Module):
             returns:
             out : [ batch_size x out_channels x horizon ]
         '''
+        #print(f"[Info] size of trajectory in Res block: {x.shape}")
         out = self.blocks[0](x)
         embed = self.cond_encoder(cond)
+        #print(f"[Info] size of trajectory in Res after first block: {out.shape}")
+        
         if self.cond_predict_scale:
             embed = embed.reshape(
                 embed.shape[0], 2, self.out_channels, 1)
-            scale = embed[:,0,...]
+            scale = embed[:,0,...]            
             bias = embed[:,1,...]
             out = scale * out + bias
+            #print(f"[Info] Scale: {scale}, bias: {bias}, out: {out.shape}")
         else:
             out = out + embed
         out = self.blocks[1](out)
         out = out + self.residual_conv(x)
+        #print(f"[Info] size of trajectory after FilM and conv {out.shape}")
         return out
 
 
@@ -92,11 +97,13 @@ class ConditionalUnet1D(nn.Module):
         if global_cond_dim is not None:
             cond_dim += global_cond_dim
 
+        print(f"[INFO] cond_dim: {cond_dim}, global_cond_dim: {global_cond_dim}")
+
         in_out = list(zip(all_dims[:-1], all_dims[1:]))
 
         local_cond_encoder = None
         if local_cond_dim is not None:
-            _, dim_out = in_out[0]
+            _, dim_out = in_out[0],
             dim_in = local_cond_dim
             local_cond_encoder = nn.ModuleList([
                 # down encoder
@@ -213,6 +220,7 @@ class ConditionalUnet1D(nn.Module):
             h_local.append(x)
         
         x = sample
+        #print(f"[Info] trajectory (x) shape: {x.shape}")
         h = []
         for idx, (resnet, resnet2, downsample) in enumerate(self.down_modules):
             x = resnet(x, global_feature)

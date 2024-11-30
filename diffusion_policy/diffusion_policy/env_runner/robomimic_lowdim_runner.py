@@ -258,9 +258,12 @@ class RobomimicLowdimRunner(BaseLowdimRunner):
 
             # start rollout
             obs = env.reset()
+            #TODO extract goal and pass it to the predict_action method
+            #goal_dict =  env.get_goal()     
+            #print(f"[Info] GOAL dim in runner {goal_dict.shape}")
             past_action = None
             policy.reset()
-
+            print(f"[Info] obs dim in runner {obs.shape}, {obs[:,:self.n_obs_steps].shape}")
             env_name = self.env_meta['env_name']
             pbar = tqdm.tqdm(total=self.max_steps, desc=f"Eval {env_name}Lowdim {chunk_idx+1}/{n_chunks}", 
                 leave=False, mininterval=self.tqdm_interval_sec)
@@ -273,8 +276,7 @@ class RobomimicLowdimRunner(BaseLowdimRunner):
                     'obs': obs[:,:self.n_obs_steps].astype(np.float32)
                 }
 
-                goal_dict = None
-
+                
                 if self.past_action and (past_action is not None):
                     # TODO: not tested
                     np_obs_dict['past_action'] = past_action[
@@ -288,7 +290,6 @@ class RobomimicLowdimRunner(BaseLowdimRunner):
                 # run policy
                 with torch.no_grad():
                     # TODO(Luca - 01): We need to add the goal here as well
-                    print("[INFO] Predicting action in robomimic_lowdim_runner!")
                     action_dict = policy.predict_action(obs_dict)
 
                 # device_transfer

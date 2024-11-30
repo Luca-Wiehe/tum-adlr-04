@@ -80,6 +80,7 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
             trajectory[condition_mask] = condition_data[condition_mask]
 
             # 2. predict model output
+            print(f"[INFO]: timesteps.shape (inference): {t}")
             model_output = model(trajectory, t, 
                 local_cond=local_cond, global_cond=global_cond)
 
@@ -183,9 +184,8 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
         # normalize input
         assert 'valid_mask' not in batch
 
-        nbatch = self.normalizer.normalize(batch)
-        obs = nbatch['obs']
-        action = nbatch['action']
+        obs = self.normalizer['obs'].normalize(batch['obs'])
+        action = self.normalizer['action'].normalize(batch['action'])
 
         # handle different ways of passing observation
         local_cond = None
@@ -234,6 +234,7 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
         noisy_trajectory[condition_mask] = trajectory[condition_mask]
         
         # Predict the noise residual
+        print(f"[INFO] timesteps.shape (training): {timesteps.shape}")
         pred = self.model(noisy_trajectory, timesteps, 
             local_cond=local_cond, global_cond=global_cond)
 
