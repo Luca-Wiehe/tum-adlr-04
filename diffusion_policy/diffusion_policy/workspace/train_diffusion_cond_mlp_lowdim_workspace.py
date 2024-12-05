@@ -22,7 +22,7 @@ import shutil
 
 from diffusion_policy.common.pytorch_util import dict_apply, optimizer_to
 from diffusion_policy.workspace.base_workspace import BaseWorkspace
-from diffusion_policy.policy.diffusion_goal_lowdim_policy import DiffusionGoalLowdimPolicy
+from diffusion_policy.policy.diffusion_cond_mlp_lowdim_policy import DiffusionCondMLPLowdimPolicy
 from diffusion_policy.dataset.base_dataset import BaseLowdimDataset
 from diffusion_policy.env_runner.base_lowdim_runner import BaseLowdimRunner
 from diffusion_policy.common.checkpoint_util import TopKCheckpointManager
@@ -32,24 +32,26 @@ from diffusers.training_utils import EMAModel
 
 OmegaConf.register_new_resolver("eval", eval, replace=True)
 
-# %%
-class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
+class TrainDiffusionCondMLPLowdimWorkspace(BaseWorkspace):
     include_keys = ['global_step', 'epoch']
 
+    """
+    """
     def __init__(self, cfg: OmegaConf, output_dir=None):
         super().__init__(cfg, output_dir=output_dir)
 
-        # set seed
+        # seed for reproducibility
         seed = cfg.training.seed
         torch.manual_seed(seed)
         np.random.seed(seed)
         random.seed(seed)
 
         # configure model
-        self.model: DiffusionGoalLowdimPolicy
+        self.model: DiffusionCondMLPLowdimPolicy
         self.model = hydra.utils.instantiate(cfg.policy)
 
-        self.ema_model: DiffusionGoalLowdimPolicy = None
+        # exponential moving average requires a corresponding model
+        self.ema_model: DiffusionCondMLPLowdimPolicy = None
         if cfg.training.use_ema:
             self.ema_model = copy.deepcopy(self.model)
 
@@ -72,16 +74,10 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
 
         # configure dataset
         dataset: BaseLowdimDataset
-
         dataset = hydra.utils.instantiate(cfg.task.dataset)
         assert isinstance(dataset, BaseLowdimDataset)
         train_dataloader = DataLoader(dataset, **cfg.dataloader)
         normalizer = dataset.get_normalizer()
-
-        #print(f"[INFO] Data sample keys: {dataset.__getitem__(1).keys()} \n")
-        #print(f"[INFO] obs shape: {dataset.__getitem__(1)['obs'].shape}")
-        #print(f"[INFO] action shape: {dataset.__getitem__(1)['action'].shape}")
-        #print(f"[INFO] goal shape: {dataset.__getitem__(1)['goal'].shape} \n")
 
         # configure validation dataset
         val_dataset = dataset.get_validation_dataset()
@@ -113,8 +109,7 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
 
         # configure env runner
         env_runner: BaseLowdimRunner
-        
-        env_runner = hydra.utils.instantiate(            
+        env_runner = hydra.utils.instantiate(
             cfg.task.env_runner,
             output_dir=self.output_dir)
         assert isinstance(env_runner, BaseLowdimRunner)
@@ -163,7 +158,6 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
                 step_log = dict()
                 # ========= train for this epoch ==========
                 train_losses = list()
-
                 with tqdm.tqdm(train_dataloader, desc=f"Training epoch {self.epoch}", 
                         leave=False, mininterval=cfg.training.tqdm_interval_sec) as tepoch:
                     for batch_idx, batch in enumerate(tepoch):
@@ -173,7 +167,6 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
                             train_sampling_batch = batch
 
                         # compute loss
-                        # TODO(Luca - 00) Compute Loss directly uses the batch. We need to adapt loss computation!
                         raw_loss = self.model.compute_loss(batch)
                         loss = raw_loss / cfg.training.gradient_accumulate_every
                         loss.backward()
@@ -206,36 +199,29 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
                             json_logger.log(step_log)
                             self.global_step += 1
 
-                            # Daniel 
-                            if batch['goal'] is not None:
-                                goal = normalizer['obs'].normalize(batch['goal'])  
-                                goal = batch['goal'][:, -1:, :]                              
-                            #_______
-
                         if (cfg.training.max_train_steps is not None) \
                             and batch_idx >= (cfg.training.max_train_steps-1):
                             break
-                #print("[Info] ", goal.shape)
+                
                 # at the end of each epoch
                 # replace train_loss with epoch average
                 train_loss = np.mean(train_losses)
                 step_log['train_loss'] = train_loss
 
                 # ========= eval for this epoch ==========
-
                 policy = self.model
                 if cfg.training.use_ema:
                     policy = self.ema_model
                 policy.eval()
 
                 # run rollout
-                if (self.epoch % cfg.training.rollout_every) == 0:
-                    runner_log = env_runner.run(policy, goal)
+                if (self.epoch % cfg.training.rollout_every) == 0 and self.epoch != 0:
+                    runner_log = env_runner.run(policy)
                     # log all
                     step_log.update(runner_log)
 
                 # run validation
-                if (self.epoch % cfg.training.val_every) == 0:
+                if (self.epoch % cfg.training.val_every) == 0 and self.epoch != 0:
                     with torch.no_grad():
                         val_losses = list()
                         with tqdm.tqdm(val_dataloader, desc=f"Validation epoch {self.epoch}", 
@@ -257,16 +243,10 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
                     with torch.no_grad():
                         # sample trajectory from training set, and evaluate difference
                         batch = train_sampling_batch
-
-                        obs_dict = {
-                            'obs': batch['obs'],
-                        }                        
-            
+                        obs_dict = {'obs': batch['obs']}
                         gt_action = batch['action']
                         
-                        
-                        result = policy.predict_action(obs_dict, goal) #Daniel - , pass last observarion to prediction method
-                        #print("[Info]: Predict action in training phase")
+                        result = policy.predict_action(obs_dict)
                         if cfg.pred_action_steps_only:
                             pred_action = result['action']
                             start = cfg.n_obs_steps - 1
@@ -286,7 +266,7 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
                         del mse
                 
                 # checkpoint
-                if (self.epoch % cfg.training.checkpoint_every) == 0:
+                if (self.epoch % cfg.training.checkpoint_every) == 0 and self.epoch != 0:
                     # checkpointing
                     if cfg.checkpoint.save_last_ckpt:
                         self.save_checkpoint()
@@ -321,7 +301,7 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
     config_path=str(pathlib.Path(__file__).parent.parent.joinpath("config")), 
     config_name=pathlib.Path(__file__).stem)
 def main(cfg):
-    workspace = TrainDiffusionGoalLowdimWorkspace(cfg)
+    workspace = TrainDiffusionCondMLPLowdimWorkspace(cfg)
     workspace.run()
 
 if __name__ == "__main__":

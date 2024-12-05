@@ -93,7 +93,14 @@ class RobomimicLowdimWrapper(gym.Env):
         return self.env.render(mode=mode, 
             height=h, width=w, 
             camera_name=self.render_camera_name)
-
+    
+    # Daniel
+    def get_goal(self):
+        raw_goal = self.env.get_goal()
+        goal = np.concatenate([
+            raw_goal[key] for key in self.obs_keys
+        ], axis=0)
+        return goal
 
 def test():
     import robomimic.utils.file_utils as FileUtils

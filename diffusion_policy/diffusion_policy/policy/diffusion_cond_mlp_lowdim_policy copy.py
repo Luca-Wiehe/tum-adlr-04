@@ -7,12 +7,12 @@ from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 
 from diffusion_policy.model.common.normalizer import LinearNormalizer
 from diffusion_policy.policy.base_lowdim_policy import BaseLowdimPolicy
-from diffusion_policy.model.diffusion.conditional_unet1d import ConditionalUnet1D
+from diffusion_policy.model.diffusion.conditional_mlp import ConditionalMLP
 from diffusion_policy.model.diffusion.mask_generator import LowdimMaskGenerator
 
-class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
+class DiffusionCondMLPLowdimPolicy(BaseLowdimPolicy):
     def __init__(self, 
-            model: ConditionalUnet1D,
+            model: ConditionalMLP,
             noise_scheduler: DDPMScheduler,
             horizon, 
             obs_dim, 
@@ -75,17 +75,16 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
         # set step values
         scheduler.set_timesteps(self.num_inference_steps)
 
-        for t in scheduler.timesteps:
+        for timestep in scheduler.timesteps:
             # 1. apply conditioning
             trajectory[condition_mask] = condition_data[condition_mask]
 
             # 2. predict model output
-            model_output = model(trajectory, t, 
-                local_cond=local_cond, global_cond=global_cond)
+            model_output = model(trajectory, timestep, global_cond=global_cond)
 
             # 3. compute previous image: x_t -> x_t-1
             trajectory = scheduler.step(
-                model_output, t, trajectory, 
+                model_output, timestep, trajectory, 
                 generator=generator,
                 **kwargs
                 ).prev_sample
@@ -101,6 +100,7 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
         obs_dict: must include "obs" key
         result: must include "action" key
         """
+
         assert 'obs' in obs_dict
         assert 'past_action' not in obs_dict # not implemented yet
         nobs = self.normalizer['obs'].normalize(obs_dict['obs'])
@@ -182,7 +182,7 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
     def compute_loss(self, batch):
         # normalize input
         assert 'valid_mask' not in batch
-
+        
         obs = self.normalizer['obs'].normalize(batch['obs'])
         action = self.normalizer['action'].normalize(batch['action'])
 
@@ -233,8 +233,7 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
         noisy_trajectory[condition_mask] = trajectory[condition_mask]
         
         # Predict the noise residual
-        pred = self.model(noisy_trajectory, timesteps, 
-            local_cond=local_cond, global_cond=global_cond)
+        pred = self.model(noisy_trajectory, timesteps, global_cond=global_cond)
 
         pred_type = self.noise_scheduler.config.prediction_type 
         if pred_type == 'epsilon':

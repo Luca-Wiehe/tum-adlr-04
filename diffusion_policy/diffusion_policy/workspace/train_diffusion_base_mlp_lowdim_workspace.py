@@ -22,7 +22,7 @@ import shutil
 
 from diffusion_policy.common.pytorch_util import dict_apply, optimizer_to
 from diffusion_policy.workspace.base_workspace import BaseWorkspace
-from diffusion_policy.policy.diffusion_ours_lowdim_policy import DiffusionOursLowdimPolicy
+from diffusion_policy.policy.diffusion_base_mlp_lowdim_policy import DiffusionBaseMLPLowdimPolicy
 from diffusion_policy.dataset.base_dataset import BaseLowdimDataset
 from diffusion_policy.env_runner.base_lowdim_runner import BaseLowdimRunner
 from diffusion_policy.common.checkpoint_util import TopKCheckpointManager
@@ -32,7 +32,7 @@ from diffusers.training_utils import EMAModel
 
 OmegaConf.register_new_resolver("eval", eval, replace=True)
 
-class TrainDiffusionOursLowdimWorkspace(BaseWorkspace):
+class TrainDiffusionBaseMLPLowdimWorkspace(BaseWorkspace):
     include_keys = ['global_step', 'epoch']
 
     """
@@ -47,11 +47,11 @@ class TrainDiffusionOursLowdimWorkspace(BaseWorkspace):
         random.seed(seed)
 
         # configure model
-        self.model: DiffusionOursLowdimPolicy
+        self.model: DiffusionBaseMLPLowdimPolicy
         self.model = hydra.utils.instantiate(cfg.policy)
 
         # exponential moving average requires a corresponding model
-        self.ema_model: DiffusionOursLowdimPolicy = None
+        self.ema_model: DiffusionBaseMLPLowdimPolicy = None
         if cfg.training.use_ema:
             self.ema_model = copy.deepcopy(self.model)
 
@@ -301,7 +301,7 @@ class TrainDiffusionOursLowdimWorkspace(BaseWorkspace):
     config_path=str(pathlib.Path(__file__).parent.parent.joinpath("config")), 
     config_name=pathlib.Path(__file__).stem)
 def main(cfg):
-    workspace = TrainDiffusionOursLowdimWorkspace(cfg)
+    workspace = TrainDiffusionCondMLPLowdimWorkspace(cfg)
     workspace.run()
 
 if __name__ == "__main__":

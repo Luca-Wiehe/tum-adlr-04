@@ -5,7 +5,8 @@ ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(ROOT_DIR)
 os.chdir(ROOT_DIR)
 
-from diffusion_policy.env_runner.robomimic_lowdim_runner import RobomimicLowdimRunner
+#from diffusion_policy.env_runner.robomimic_lowdim_runner import RobomimicLowdimRunner
+from diffusion_policy.env_runner.robomimic_goal_lowdim_runner import RobomimicGoalLowdimRunner
 
 def test():
     import os
@@ -19,7 +20,8 @@ def test():
     runner_cfg['n_train'] = 1
     runner_cfg['n_test'] = 0
     del runner_cfg['_target_']
-    runner = RobomimicLowdimRunner(
+    #runner = RobomimicLowdimRunner(
+    runner = RobomimicGoalLowdimRunner(
         **runner_cfg, 
         output_dir='/tmp/test')
 

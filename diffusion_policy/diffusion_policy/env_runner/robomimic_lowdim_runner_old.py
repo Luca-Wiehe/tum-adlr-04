@@ -8,7 +8,6 @@ import tqdm
 import h5py
 import dill
 import math
-from typing import Dict
 import wandb.sdk.data_types.video as wv
 from diffusion_policy.gym_util.async_vector_env import AsyncVectorEnv
 # from diffusion_policy.gym_util.sync_vector_env import SyncVectorEnv
@@ -226,7 +225,7 @@ class RobomimicLowdimRunner(BaseLowdimRunner):
         self.abs_action = abs_action
         self.tqdm_interval_sec = tqdm_interval_sec
 
-    def run(self, policy: BaseLowdimPolicy, goal: Dict[str, torch.Tensor] = None):
+    def run(self, policy: BaseLowdimPolicy):
         device = policy.device
         dtype = policy.dtype
         env = self.env
@@ -293,8 +292,7 @@ class RobomimicLowdimRunner(BaseLowdimRunner):
                 # run policy
                 with torch.no_grad():
                     # TODO(Luca - 01): We need to add the goal here as well
-                    #print("[INFO]", goal)
-                    action_dict = policy.predict_action(obs_dict, goal)
+                    action_dict = policy.predict_action(obs_dict)
 
                 # device_transfer
                 np_action_dict = dict_apply(action_dict,

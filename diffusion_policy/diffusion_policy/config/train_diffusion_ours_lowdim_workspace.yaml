@@ -1,4 +1,4 @@
-_target_: diffusion_policy.workspace.train_diffusion_ours_lowdim_workspace.TrainDiffusionOursLowdimWorkspace
+_target_: diffusion_policy.workspace.train_diffusion_cond_mlp_lowdim_workspace.TrainDiffusionCondMLPLowdimWorkspace
 action_dim: ${task.action_dim}
 checkpoint:
   save_last_ckpt: true
@@ -67,7 +67,7 @@ optimizer:
   weight_decay: 1.0e-06
 past_action_visible: false
 policy:
-  _target_: diffusion_policy.policy.diffusion_ours_lowdim_policy.DiffusionOursLowdimPolicy
+  _target_: diffusion_policy.policy.diffusion_ours_lowdim_policy.DiffusionCondMLPLowdimPolicy
   action_dim: ${action_dim}
   horizon: ${horizon}
   model:

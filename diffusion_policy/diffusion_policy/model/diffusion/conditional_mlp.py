@@ -47,7 +47,7 @@ class ConditionalFiLMLayer(nn.Module):
         return out
 
 
-class ConditionalSimpleMLP(nn.Module):
+class ConditionalMLP(nn.Module):
     def __init__(self, input_dim, num_layers=2, cond_dim=None, diffusion_step_embed_dim=256, hidden_dim=512, cond_predict_scale=False):
         super().__init__()
 

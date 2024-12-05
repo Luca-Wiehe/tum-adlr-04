@@ -1,4 +1,4 @@
-_target_: diffusion_policy.workspace.train_diffusion_ours_lowdim_workspace.TrainDiffusionOursLowdimWorkspace
+_target_: diffusion_policy.workspace.train_diffusion_cond_mlp_lowdim_workspace.TrainDiffusionCondMLPLowdimWorkspace
 action_dim: 10
 checkpoint:
   save_last_ckpt: true
@@ -56,11 +56,11 @@ optimizer:
   weight_decay: 1.0e-06
 past_action_visible: false
 policy:
-  _target_: diffusion_policy.policy.diffusion_ours_lowdim_policy.DiffusionOursLowdimPolicy
+  _target_: diffusion_policy.policy.diffusion_cond_mlp_lowdim_policy.DiffusionCondMLPLowdimPolicy
   action_dim: 10
   horizon: 16
   model:
-    _target_: diffusion_policy.model.diffusion.conditional_simple_mlp.ConditionalSimpleMLP
+    _target_: diffusion_policy.model.diffusion.conditional_mlp.ConditionalMLP
     cond_predict_scale: true
     diffusion_step_embed_dim: 256
     input_dim: 10
@@ -104,7 +104,7 @@ task:
   dataset_path: data/robomimic/datasets/lift/ph/low_dim_abs.hdf5
   dataset_type: ph
   env_runner:
-    _target_: diffusion_policy.env_runner.robomimic_lowdim_runner.RobomimicLowdimRunner
+    _target_: diffusion_policy.env_runner.robomimic_lowdim_runner_old.RobomimicLowdimRunner
     abs_action: true
     crf: 22
     dataset_path: data/robomimic/datasets/lift/ph/low_dim_abs.hdf5
@@ -141,7 +141,7 @@ task:
   task_name: lift
 task_name: lift_lowdim
 training:
-  checkpoint_every: 1000
+  checkpoint_every: 199
   debug: false
   device: cuda:0
   gradient_accumulate_every: 1
@@ -149,14 +149,14 @@ training:
   lr_warmup_steps: 500
   max_train_steps: null
   max_val_steps: null
-  num_epochs: 2000
+  num_epochs: 200
   resume: true
-  rollout_every: 500
+  rollout_every: 199
   sample_every: 5
   seed: 42
   tqdm_interval_sec: 1.0
   use_ema: true
-  val_every: 500
+  val_every: 1
 val_dataloader:
   batch_size: 256
   num_workers: 1
