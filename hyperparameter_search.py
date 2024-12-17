@@ -4,6 +4,7 @@ import subprocess
 import yaml
 import json
 import argparse
+import itertools
 from skopt import Optimizer
 from skopt.space import Integer
 
@@ -22,7 +23,7 @@ config_template = "{diffusion_policy_dir}/task_configurations/{task_name}/{task_
 out_dir = "~/tum-adlr-04/data/outputs/{}/{}/"
 
 train_script_template = (
-    f"python {diffusion_policy_dir}/train.py --config-dir={os.path.join(diffusion_policy_dir, 'task_configurations')} "
+    f"python {diffusion_policy_dir}/train.py --config-dir={os.path.join(diffusion_policy_dir, 'task_configurations', '{task_name}')} "
     "--config-name=<training_configuration_file>.yaml "
     "training.seed=42 training.device=cuda:0 "
     "hydra.run.dir=<output_dir>"
@@ -33,6 +34,14 @@ evaluation_script_template = (
     "--checkpoint {} "
     "--output_dir {} "
 )
+
+def get_obs_dim(file_path):
+    """
+    Reads the YAML file to fetch the 'obs_dim' value.
+    """
+    with open(file_path, "r") as file:
+        config = yaml.safe_load(file)
+    return config.get("obs_dim", 1)
 
 def update_yaml_file(file_path, updated_values):
     with open(file_path, "r") as file:
@@ -56,6 +65,17 @@ def save_hyperparameters_to_file(hyperparameters, file_path):
     with open(file_path, "w") as file:
         for key, value in hyperparameters.items():
             file.write(f"{key}: {value}\n")
+
+def get_grid_hparams():
+    observation_horizon_values = range(1, 6)
+    action_horizon_values = range(1, 6)
+    for obs_horizon, act_horizon in itertools.product(observation_horizon_values, action_horizon_values):
+        yield {
+            "n_obs_steps": obs_horizon,
+            "n_action_steps": act_horizon,
+            "horizon": MAX_HORIZON,
+            "training.num_epochs": TRAIN_EPISODES,
+        }
 
 def get_random_hparams():
     observation_horizon = random.randint(1, 5)
@@ -83,7 +103,7 @@ def run_training_and_evaluation(task_name, test_idx, hyperparameters, optimizer=
     hyperparam_file_path = os.path.join(current_out_dir, "hyperparameters.txt")
     save_hyperparameters_to_file(hyperparameters, hyperparam_file_path)
 
-    architectures = ["transformer", "unet"]  # Add "ours" if needed
+    architectures = ["unet"]  # Add "ours" if needed
     for arch in architectures:
         training_file = config_template.format(
             diffusion_policy_dir=diffusion_policy_dir,
@@ -91,25 +111,52 @@ def run_training_and_evaluation(task_name, test_idx, hyperparameters, optimizer=
             architecture_name=arch
         )
 
-        hyperparameter_file = os.path.join(
+        workspace_file = os.path.join(
             diffusion_policy_dir, f"diffusion_policy/config/train_diffusion_{arch}_lowdim_workspace.yaml"
         )
 
-        update_yaml_file(hyperparameter_file, {
-            **hyperparameters,
+        # Fetch `obs_dim` from the YAML file
+        obs_dim = get_obs_dim(training_file)
+
+
+        if arch == "unet":
+            update_yaml_file(training_file, {
+                "training.num_epochs": TRAIN_EPISODES,
+                "training.rollout_every": TRAIN_EPISODES - 1,
+                "training.checkpoint_every": TRAIN_EPISODES - 1,
+                "n_obs_steps": hyperparameters["n_obs_steps"],
+                "policy.n_obs_steps": hyperparameters["n_obs_steps"],
+                "task.env_runner.n_obs_steps": hyperparameters["n_obs_steps"],
+                "n_action_steps": hyperparameters["n_action_steps"],
+                "policy.n_action_steps": hyperparameters["n_action_steps"],
+                "task.env_runner.n_action_steps": hyperparameters["n_action_steps"],
+                "policy.model.global_cond_dim": hyperparameters["n_obs_steps"] * obs_dim
+            })
+        elif arch == "transformer":
+            update_yaml_file(training_file, {
+                "training.num_epochs": TRAIN_EPISODES,
+                "training.rollout_every": TRAIN_EPISODES - 1,
+                "training.checkpoint_every": TRAIN_EPISODES - 1,
+                "n_obs_steps": hyperparameters["n_obs_steps"],
+                "policy.n_obs_steps": hyperparameters["n_obs_steps"],
+                "policy.model.n_obs_steps": hyperparameters["n_obs_steps"],
+                "task.env_runner.n_obs_steps": hyperparameters["n_obs_steps"],
+                "n_action_steps": hyperparameters["n_action_steps"],
+                "policy.n_action_steps": hyperparameters["n_action_steps"],
+                "task.env_runner.n_action_steps": hyperparameters["n_action_steps"],
+                "policy.model.cond_dim": hyperparameters["n_obs_steps"] * obs_dim
+            })
+
+        update_yaml_file(workspace_file, {
             "hydra.run.dir": current_out_dir,
             "hydra.sweep.dir": current_out_dir,
             "logging.name": arch,
             "multi_run.run_dir": current_out_dir,
         })
 
-        update_yaml_file(training_file, {
-            "training.num_epochs": TRAIN_EPISODES,
-        })
-
         train_command = train_script_template.replace(
             "<training_configuration_file>", os.path.basename(training_file).split(".")[0]
-        )
+        ).format(task_name=task_name)
         train_command = train_command.replace(
             "<output_dir>", os.path.join(current_out_dir, arch)
         )
@@ -128,6 +175,74 @@ def run_training_and_evaluation(task_name, test_idx, hyperparameters, optimizer=
             return False
 
     return True
+
+def run_hyperparameter_tests_bayesian(task_name):
+    optimizer = Optimizer(
+        dimensions=[Integer(1, 5), Integer(1, 5)],
+        random_state=42,
+        base_estimator="GP"
+    )
+
+    evaluated_params = []
+    evaluated_scores = []
+
+    base_out_dir = os.path.expanduser(out_dir.format(task_name, ""))
+    os.makedirs(base_out_dir, exist_ok=True)
+    existing_dirs = [d for d in os.listdir(base_out_dir) if d.startswith("hparams_")]
+    starting_index = len(existing_dirs)
+
+    for test_idx in range(starting_index, N_TOTAL_TESTS):
+        if test_idx < N_RANDOM_TESTS:
+            hyperparameters = get_random_hparams()
+        else:
+            hyperparameters = get_bayesian_hparams(optimizer)
+
+        success = run_training_and_evaluation(task_name, test_idx, hyperparameters)
+        if not success:
+            print(f"Test {test_idx} failed. Skipping.")
+            continue
+
+        eval_log_path = base_out_dir.format(task_name, f"hparams_{test_idx}/unet/eval_out/eval_log.json")
+        try:
+            with open(eval_log_path, "r") as f:
+                eval_data = json.load(f)
+            score = eval_data.get("test/mean_score", None)
+            if score is None:
+                print(f"Test {test_idx} has no score. Skipping.")
+                continue
+        except Exception as e:
+            print(f"Error reading evaluation log for test {test_idx}: {e}")
+            continue
+
+        params = [hyperparameters["n_obs_steps"], hyperparameters["n_action_steps"]]
+        evaluated_params.append(params)
+        evaluated_scores.append(-score)
+        optimizer.tell(params, -score)
+
+def run_hyperparameter_tests_grid(task_name):
+    base_out_dir = os.path.expanduser(out_dir.format(task_name, ""))
+    os.makedirs(base_out_dir, exist_ok=True)
+    existing_dirs = [d for d in os.listdir(base_out_dir) if d.startswith("hparams_")]
+    starting_index = len(existing_dirs)
+
+    grid_hparams = get_grid_hparams()
+    for test_idx, hyperparameters in enumerate(itertools.islice(grid_hparams, starting_index, N_TOTAL_TESTS), start=starting_index):
+        success = run_training_and_evaluation(task_name, test_idx, hyperparameters)
+        if not success:
+            print(f"Test {test_idx} failed. Skipping.")
+            continue
+
+        eval_log_path = base_out_dir.format(task_name, f"hparams_{test_idx}/unet/eval_out/eval_log.json")
+        try:
+            with open(eval_log_path, "r") as f:
+                eval_data = json.load(f)
+            score = eval_data.get("test/mean_score", None)
+            if score is None:
+                print(f"Test {test_idx} has no score. Skipping.")
+                continue
+        except Exception as e:
+            print(f"Error reading evaluation log for test {test_idx}: {e}")
+            continue
 
 def run_hyperparameter_tests(task_name):
     optimizer = Optimizer(
@@ -202,6 +317,10 @@ def run_hyperparameter_tests(task_name):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run hyperparameter tests for a specific task.")
     parser.add_argument("--task", required=True, choices=task_options, help="Task to test (e.g., can, lift).")
+    parser.add_argument("--search-type", required=True, choices=["bayesian", "grid"], help="Search type: bayesian or grid.")
     args = parser.parse_args()
 
-    run_hyperparameter_tests(args.task)
+    if args.search_type == "bayesian":
+        run_hyperparameter_tests_bayesian(args.task)
+    elif args.search_type == "grid":
+        run_hyperparameter_tests_grid(args.task)

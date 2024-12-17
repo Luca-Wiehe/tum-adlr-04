@@ -39,7 +39,7 @@ logging:
 multi_run:
   run_dir: data/outputs/2023.02.25/02.57.29_train_diffusion_unet_lowdim_tool_hang_lowdim
   wandb_name_base: 2023.02.25-02.57.29_train_diffusion_unet_lowdim_tool_hang_lowdim
-n_action_steps: 8
+n_action_steps: 1
 n_latency_steps: 0
 n_obs_steps: 2
 name: train_diffusion_unet_lowdim
@@ -72,7 +72,7 @@ policy:
     kernel_size: 5
     local_cond_dim: null
     n_groups: 8
-  n_action_steps: 8
+  n_action_steps: 1
   n_obs_steps: 2
   noise_scheduler:
     _target_: diffusers.schedulers.scheduling_ddpm.DDPMScheduler
@@ -112,13 +112,13 @@ task:
   dataset_path: data/robomimic/datasets/tool_hang/ph/low_dim_abs.hdf5
   dataset_type: ph
   env_runner:
-    _target_: diffusion_policy.env_runner.robomimic_lowdim_runner.RobomimicLowdimRunner
+    _target_: diffusion_policy.env_runner.robomimic_lowdim_runner_old.RobomimicLowdimRunner
     abs_action: true
     crf: 22
     dataset_path: data/robomimic/datasets/tool_hang/ph/low_dim_abs.hdf5
     fps: 10
     max_steps: 700
-    n_action_steps: 8
+    n_action_steps: 1
     n_envs: 28
     n_latency_steps: 0
     n_obs_steps: 2
@@ -148,7 +148,7 @@ task:
   task_name: tool_hang
 task_name: tool_hang_lowdim
 training:
-  checkpoint_every: 50
+  checkpoint_every: 99
   debug: false
   device: cuda:0
   gradient_accumulate_every: 1
@@ -156,9 +156,9 @@ training:
   lr_warmup_steps: 500
   max_train_steps: null
   max_val_steps: null
-  num_epochs: 5000
+  num_epochs: 100
   resume: true
-  rollout_every: 50
+  rollout_every: 99
   sample_every: 5
   seed: 42
   tqdm_interval_sec: 1.0

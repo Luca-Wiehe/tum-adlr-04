@@ -41,7 +41,7 @@ logging:
   id: null
   mode: online
   name: ours
-  project: diffusion_policy_debug
+  project: diffusion_policy_hparam_tests
   resume: true
   tags:
   - ${name}
@@ -105,7 +105,7 @@ policy:
 pred_action_steps_only: false
 task_name: ${task.name}
 training:
-  checkpoint_every: 10
+  checkpoint_every: 50
   debug: false
   device: cuda:0
   gradient_accumulate_every: 1
@@ -113,9 +113,9 @@ training:
   lr_warmup_steps: 500
   max_train_steps: null
   max_val_steps: null
-  num_epochs: 15
+  num_epochs: 100
   resume: true
-  rollout_every: 10
+  rollout_every: 99
   sample_every: 5
   seed: 42
   tqdm_interval_sec: 1.0

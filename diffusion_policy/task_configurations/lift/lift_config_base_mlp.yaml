@@ -140,7 +140,7 @@ task:
   task_name: lift
 task_name: lift_lowdim
 training:
-  checkpoint_every: 199
+  checkpoint_every: 1999
   debug: false
   device: cuda:0
   gradient_accumulate_every: 1
@@ -148,9 +148,9 @@ training:
   lr_warmup_steps: 500
   max_train_steps: null
   max_val_steps: null
-  num_epochs: 200
+  num_epochs: 2000
   resume: true
-  rollout_every: 199
+  rollout_every: 1999
   sample_every: 5
   seed: 42
   tqdm_interval_sec: 1.0

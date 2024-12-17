@@ -112,7 +112,7 @@ task:
   dataset_path: data/robomimic/datasets/square/ph/low_dim_abs.hdf5
   dataset_type: ph
   env_runner:
-    _target_: diffusion_policy.env_runner.robomimic_lowdim_runner.RobomimicLowdimRunner
+    _target_: diffusion_policy.env_runner.robomimic_lowdim_runner_old.RobomimicLowdimRunner
     abs_action: true
     crf: 22
     dataset_path: data/robomimic/datasets/square/ph/low_dim_abs.hdf5

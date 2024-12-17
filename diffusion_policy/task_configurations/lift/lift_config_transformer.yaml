@@ -29,7 +29,7 @@ logging:
   id: null
   mode: online
   name: 2022.12.24-06.24.51_train_diffusion_transformer_lowdim_lift_lowdim
-  project: diffusion_policy_debug
+  project: diffusion_policy_hparam_tests
   resume: true
   tags:
   - train_diffusion_transformer_lowdim
@@ -38,7 +38,7 @@ logging:
 multi_run:
   run_dir: data/outputs/2022.12.24/06.24.51_train_diffusion_transformer_lowdim_lift_lowdim
   wandb_name_base: 2022.12.24-06.24.51_train_diffusion_transformer_lowdim_lift_lowdim
-n_action_steps: 8
+n_action_steps: 2
 n_latency_steps: 0
 n_obs_steps: 2
 name: train_diffusion_transformer_lowdim
@@ -58,7 +58,7 @@ policy:
   model:
     _target_: diffusion_policy.model.diffusion.transformer_for_diffusion.TransformerForDiffusion
     causal_attn: true
-    cond_dim: 19
+    cond_dim: 38
     horizon: 10
     input_dim: 10
     n_cond_layers: 0
@@ -71,7 +71,7 @@ policy:
     p_drop_attn: 0.3
     p_drop_emb: 0.0
     time_as_cond: true
-  n_action_steps: 8
+  n_action_steps: 2
   n_obs_steps: 2
   noise_scheduler:
     _target_: diffusers.schedulers.scheduling_ddpm.DDPMScheduler
@@ -108,13 +108,13 @@ task:
   dataset_path: data/robomimic/datasets/lift/ph/low_dim_abs.hdf5
   dataset_type: ph
   env_runner:
-    _target_: diffusion_policy.env_runner.robomimic_lowdim_runner.RobomimicLowdimRunner
+    _target_: diffusion_policy.env_runner.robomimic_lowdim_runner_old.RobomimicLowdimRunner
     abs_action: true
     crf: 22
     dataset_path: data/robomimic/datasets/lift/ph/low_dim_abs.hdf5
     fps: 10
     max_steps: 400
-    n_action_steps: 8
+    n_action_steps: 2
     n_envs: 28
     n_latency_steps: 0
     n_obs_steps: 2
@@ -145,7 +145,7 @@ task:
   task_name: lift
 task_name: lift_lowdim
 training:
-  checkpoint_every: 50
+  checkpoint_every: 99
   debug: false
   device: cuda:0
   gradient_accumulate_every: 1
@@ -155,12 +155,12 @@ training:
   max_val_steps: null
   num_epochs: 100
   resume: true
-  rollout_every: 50
+  rollout_every: 99
   sample_every: 5
   seed: 42
   tqdm_interval_sec: 1.0
   use_ema: true
-  val_every: 25
+  val_every: 1
 val_dataloader:
   batch_size: 256
   num_workers: 1
