@@ -147,7 +147,10 @@ def _data_to_obs(raw_obs, raw_actions, obs_keys, abs_action, rotation_transforme
         raw_obs[key] for key in obs_keys
     ], axis=-1).astype(np.float32)
 
-    goal = np.tile(obs[-1:], (obs.shape[0], 1))
+    #goal = np.tile(obs[-1:], (obs.shape[0], 1))
+    goal = np.tile(np.flip(obs, 1)[:5, :], (obs.shape[0], 1, 1))#, (obs.shape[0], 1))
+    #print(f"[Info] goal shape {goal.shape}")
+    #print(f"[Info] goal shape {obs.shape}")
 
     if abs_action:
         is_dual_arm = False

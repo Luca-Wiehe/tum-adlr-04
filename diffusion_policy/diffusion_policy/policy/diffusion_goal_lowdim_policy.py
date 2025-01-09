@@ -7,7 +7,7 @@ from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 
 from diffusion_policy.model.common.normalizer import LinearNormalizer
 from diffusion_policy.policy.base_lowdim_policy import BaseLowdimPolicy
-from diffusion_policy.model.diffusion.conditional_unet1d import ConditionalUnet1D
+from diffusion_policy.model.diffusion.conditional_goal_unet1d import ConditionalUnet1D
 from diffusion_policy.model.diffusion.mask_generator import LowdimMaskGenerator
 
 class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
@@ -19,9 +19,11 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
             action_dim, 
             n_action_steps, 
             n_obs_steps,
+            n_to_goal_steps,
             num_inference_steps=None,
             obs_as_local_cond=False,
             obs_as_global_cond=False,
+            goal_conditioned = False,
             pred_action_steps_only=False,
             oa_step_convention=False,
             # parameters passed to step
@@ -45,8 +47,10 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
         self.action_dim = action_dim
         self.n_action_steps = n_action_steps
         self.n_obs_steps = n_obs_steps
+        self.n_to_goal_steps = n_to_goal_steps
         self.obs_as_local_cond = obs_as_local_cond
         self.obs_as_global_cond = obs_as_global_cond
+        self.goal_conditioned = goal_conditioned
         self.pred_action_steps_only = pred_action_steps_only
         self.oa_step_convention = oa_step_convention
         self.kwargs = kwargs
@@ -58,7 +62,7 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
     # ========= inference  ============
     def conditional_sample(self, 
             condition_data, condition_mask,
-            local_cond=None, global_cond=None,
+            local_cond=None, global_cond=None, goal_cond=None,
             generator=None,
             # keyword arguments to scheduler.step
             **kwargs
@@ -81,7 +85,7 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
 
             # 2. predict model output
             model_output = model(trajectory, t, 
-                local_cond=local_cond, global_cond=global_cond)
+                local_cond=local_cond, global_cond=global_cond, goal_cond=goal_cond)
 
             # 3. compute previous image: x_t -> x_t-1
             trajectory = scheduler.step(
@@ -94,15 +98,106 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
         trajectory[condition_mask] = condition_data[condition_mask]        
 
         return trajectory
-
+    
     def predict_action(self, 
+                       obs_dict: Dict[str, torch.Tensor], 
+                       goal_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        obs_dict: must include "obs" key
+        result: must include "action" key
+        """
+        assert 'obs' in obs_dict
+        assert 'past_action' not in obs_dict # not implemented yet
+        nobs = self.normalizer['obs'].normalize(obs_dict['obs'])
+        ngoal = self.normalizer['obs'].normalize(goal_dict['obs'])
+
+        B, _, Do = nobs.shape
+        To = self.n_obs_steps
+        Tg = self.n_to_goal_steps
+        assert Do == self.obs_dim
+        T = self.horizon
+        Da = self.action_dim
+
+        # build input
+        device = self.device
+        dtype = self.dtype
+
+        # handle different ways of passing observation
+        local_cond = None
+        global_cond = None
+        goal_cond = None
+        if self.obs_as_local_cond:
+            #print("using local cond")
+            # condition through local feature
+            # all zero except first To timesteps
+            local_cond = torch.zeros(size=(B,T,Do), device=device, dtype=dtype)
+            local_cond[:,:To] = nobs[:,:To]
+            shape = (B, T, Da)
+            cond_data = torch.zeros(size=shape, device=device, dtype=dtype)
+            cond_mask = torch.zeros_like(cond_data, dtype=torch.bool)
+        elif self.obs_as_global_cond:
+            #print("using global cond")
+            # condition throught global feature
+            global_cond = nobs[:,:To].reshape(nobs.shape[0], -1)
+            goal_cond = ngoal[:,:Tg].reshape(ngoal.shape[0], -1)
+            goal_cond = torch.flip(goal_cond, dims = [1])
+            shape = (B, T, Da)
+            if self.pred_action_steps_only:
+                shape = (B, self.n_action_steps, Da)
+            cond_data = torch.zeros(size=shape, device=device, dtype=dtype)
+            cond_mask = torch.zeros_like(cond_data, dtype=torch.bool)
+        else:
+            # condition through impainting
+            shape = (B, T, Da+Do)
+            cond_data = torch.zeros(size=shape, device=device, dtype=dtype)
+            cond_mask = torch.zeros_like(cond_data, dtype=torch.bool)
+            cond_data[:,:To,Da:] = nobs[:,:To]
+            cond_mask[:,:To,Da:] = True
+
+        #print(f"[Info] goal in prediction {goal_cond.shape}")
+        # run sampling
+        nsample = self.conditional_sample(
+            cond_data, 
+            cond_mask,
+            local_cond=local_cond,
+            global_cond=global_cond,
+            goal_cond=goal_cond,
+            **self.kwargs)
+        
+        # unnormalize prediction
+        naction_pred = nsample[...,:Da]
+        action_pred = self.normalizer['action'].unnormalize(naction_pred)
+
+        # get action
+        if self.pred_action_steps_only:
+            action = action_pred
+        else:
+            start = To
+            if self.oa_step_convention:
+                start = To - 1
+            end = start + self.n_action_steps
+            action = action_pred[:,start:end]
+        
+        result = {
+            'action': action,
+            'action_pred': action_pred
+        }
+        if not (self.obs_as_local_cond or self.obs_as_global_cond):
+            nobs_pred = nsample[...,Da:]
+            obs_pred = self.normalizer['obs'].unnormalize(nobs_pred)
+            action_obs_pred = obs_pred[:,start:end]
+            result['action_obs_pred'] = action_obs_pred
+            result['obs_pred'] = obs_pred
+        return result
+
+    """ def predict_action(self, 
                        obs_dict: Dict[str, torch.Tensor],                       
                        goal: Dict[str, torch.Tensor] = None # Daniel             
                        ) -> Dict[str, torch.Tensor]:
-        """
-        obs_dict: must include "obs" key AND "goal" key
-        result: must include "action" key
-        """
+        
+        #obs_dict: must include "obs" key AND "goal" key
+        #result: must include "action" key
+    
         print("[Info] Entering prediction")
         assert 'obs' in obs_dict
         assert 'past_action' not in obs_dict # not implemented yet
@@ -152,7 +247,7 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
                 global_cond = torch.cat([global_cond, goal[:B, :, :]], dim=1).reshape(nobs.shape[0], -1)
             else:
                 global_cond = global_cond.reshape(nobs.shape[0], -1)
-            print(f"[Info] obs.shape in prediction: {nobs.shape}")   
+            #print(f"[Info] obs.shape in prediction: {nobs.shape}")   
       
             # TODO(Luca - 10.4): Adjust this shape as well
             shape = (B, T, Da)
@@ -202,8 +297,9 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
             result['action_obs_pred'] = action_obs_pred
             result['obs_pred'] = obs_pred
 
-            print(f"[Info] reuslts of prediction {result.keys()}")
-        return result
+            #print(f"[Info] reuslts of prediction {result.keys()}")
+        return result 
+        """
     
     # ========= training  ============
     def set_normalizer(self, normalizer: LinearNormalizer):
@@ -216,10 +312,24 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
         obs = self.normalizer['obs'].normalize(batch['obs'])
         action = self.normalizer['action'].normalize(batch['action'])
 
+        if batch['goal'] is not None:
+            #print(f"[Info] {batch['goal'].shape}")            
+            goal = self.normalizer['obs'].normalize(batch['goal']) # normalize as if the goal was an observation
+
+        #print(f"[info] obs shape {obs.shape}")
+        #print(f"[info] goal after normalization: {goal.shape}")
         # handle different ways of passing observation
         local_cond = None
         global_cond = None
+        goal_cond = None
         trajectory = action
+
+        if self.goal_conditioned:            
+            goal_cond = goal[:, 0, :self.n_to_goal_steps, :].reshape(
+                goal.shape[0], -1)
+            #print(f"[info] goal after flattening: {goal_cond.shape}")
+            goal_cond = torch.flip(goal_cond, dims = [1])
+
         if self.obs_as_local_cond:
             # zero out observations after n_obs_steps
             local_cond = obs
@@ -227,6 +337,8 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
         elif self.obs_as_global_cond:
             global_cond = obs[:,:self.n_obs_steps,:].reshape(
                 obs.shape[0], -1)
+            #print(f"[info] global after flattening: {global_cond.shape}")
+            
             if self.pred_action_steps_only:
                 To = self.n_obs_steps
                 start = To
@@ -264,7 +376,7 @@ class DiffusionGoalLowdimPolicy(BaseLowdimPolicy):
         
         # Predict the noise residual
         pred = self.model(noisy_trajectory, timesteps, 
-            local_cond=local_cond, global_cond=global_cond)
+            local_cond=local_cond, global_cond=global_cond, goal_cond=goal_cond)
 
         pred_type = self.noise_scheduler.config.prediction_type 
         if pred_type == 'epsilon':

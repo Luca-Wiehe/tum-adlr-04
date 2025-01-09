@@ -15,12 +15,12 @@ class ConditionalResidualBlock1D(nn.Module):
     def __init__(self, 
             in_channels, 
             out_channels, 
-            cond_dim,            
+            cond_dim,
+            goal_cond_dim,            
             kernel_size=3,
             n_groups=8,
-            cond_predict_scale=False,
-            goal_conditioned = False,
-            goal_cond_dim,
+            goal_conditioned=False, 
+            cond_predict_scale=False                       
             ):
         super().__init__()
 
@@ -42,9 +42,9 @@ class ConditionalResidualBlock1D(nn.Module):
             nn.Linear(cond_dim, cond_channels),
             Rearrange('batch t -> batch t 1'),
         )
-
-        # D. Goal conditioning        
-        if goal_conditioned:
+        # Goal conditioning    
+        #print(goal_conditioned)    
+        if goal_conditioned:            
             self.goal_conditioned = goal_conditioned
             self.goal_cond_encoder = nn.Sequential(
                 nn.Mish(),
@@ -52,7 +52,7 @@ class ConditionalResidualBlock1D(nn.Module):
                 Rearrange('batch t -> batch t 1'),
             )
         #________
-        # make sure dimensions compatible
+        # make sure dimensions are compatible
         self.residual_conv = nn.Conv1d(in_channels, out_channels, 1) \
             if in_channels != out_channels else nn.Identity()
 
@@ -102,11 +102,13 @@ class ConditionalUnet1D(nn.Module):
         input_dim,
         local_cond_dim=None,
         global_cond_dim=None,
+        goal_cond_dim=None,
         diffusion_step_embed_dim=256,
         down_dims=[256,512,1024],
         kernel_size=3,
         n_groups=8,
-        cond_predict_scale=False
+        cond_predict_scale=False,
+        goal_conditioned=False
         ):
         super().__init__()
         all_dims = [input_dim] + list(down_dims)
@@ -120,9 +122,15 @@ class ConditionalUnet1D(nn.Module):
             nn.Linear(dsed * 4, dsed),
         )
         cond_dim = dsed
+        goal_dim = dsed
         if global_cond_dim is not None:
             cond_dim += global_cond_dim
+        
+        if goal_cond_dim is not None:
+            goal_dim += goal_cond_dim
 
+        print(f"[INFO] scaled: {cond_predict_scale}")
+        print(f"[INFO] goal conditioned: {goal_conditioned}")
         print(f"[INFO] cond_dim: {cond_dim}, global_cond_dim: {global_cond_dim}")
 
         in_out = list(zip(all_dims[:-1], all_dims[1:]))
@@ -147,14 +155,14 @@ class ConditionalUnet1D(nn.Module):
         mid_dim = all_dims[-1]
         self.mid_modules = nn.ModuleList([
             ConditionalResidualBlock1D(
-                mid_dim, mid_dim, cond_dim=cond_dim,
+                mid_dim, mid_dim, cond_dim=cond_dim, goal_cond_dim=goal_dim,
                 kernel_size=kernel_size, n_groups=n_groups,
-                cond_predict_scale=cond_predict_scale
+                cond_predict_scale=cond_predict_scale, goal_conditioned=goal_conditioned
             ),
             ConditionalResidualBlock1D(
-                mid_dim, mid_dim, cond_dim=cond_dim,
+                mid_dim, mid_dim, cond_dim=cond_dim, goal_cond_dim=goal_dim,
                 kernel_size=kernel_size, n_groups=n_groups,
-                cond_predict_scale=cond_predict_scale
+                cond_predict_scale=cond_predict_scale, goal_conditioned=goal_conditioned
             ),
         ])
 
@@ -163,13 +171,13 @@ class ConditionalUnet1D(nn.Module):
             is_last = ind >= (len(in_out) - 1)
             down_modules.append(nn.ModuleList([
                 ConditionalResidualBlock1D(
-                    dim_in, dim_out, cond_dim=cond_dim, 
+                    dim_in, dim_out, cond_dim=cond_dim, goal_cond_dim=goal_dim, 
                     kernel_size=kernel_size, n_groups=n_groups,
-                    cond_predict_scale=cond_predict_scale),
+                    cond_predict_scale=cond_predict_scale, goal_conditioned=goal_conditioned),
                 ConditionalResidualBlock1D(
                     dim_out, dim_out, cond_dim=cond_dim, 
-                    kernel_size=kernel_size, n_groups=n_groups,
-                    cond_predict_scale=cond_predict_scale),
+                    kernel_size=kernel_size, n_groups=n_groups, goal_cond_dim=goal_dim,
+                    cond_predict_scale=cond_predict_scale, goal_conditioned=goal_conditioned),
                 Downsample1d(dim_out) if not is_last else nn.Identity()
             ]))
 
@@ -178,13 +186,13 @@ class ConditionalUnet1D(nn.Module):
             is_last = ind >= (len(in_out) - 1)
             up_modules.append(nn.ModuleList([
                 ConditionalResidualBlock1D(
-                    dim_out*2, dim_in, cond_dim=cond_dim,
+                    dim_out*2, dim_in, cond_dim=cond_dim, goal_cond_dim=goal_dim,
                     kernel_size=kernel_size, n_groups=n_groups,
-                    cond_predict_scale=cond_predict_scale),
+                    cond_predict_scale=cond_predict_scale, goal_conditioned=goal_conditioned),
                 ConditionalResidualBlock1D(
-                    dim_in, dim_in, cond_dim=cond_dim,
+                    dim_in, dim_in, cond_dim=cond_dim, goal_cond_dim=goal_dim,
                     kernel_size=kernel_size, n_groups=n_groups,
-                    cond_predict_scale=cond_predict_scale),
+                    cond_predict_scale=cond_predict_scale, goal_conditioned=goal_conditioned),
                 Upsample1d(dim_in) if not is_last else nn.Identity()
             ]))
         
@@ -206,12 +214,13 @@ class ConditionalUnet1D(nn.Module):
     def forward(self, 
             sample: torch.Tensor, 
             timestep: Union[torch.Tensor, float, int], 
-            local_cond=None, global_cond=None, **kwargs):
+            local_cond=None, global_cond=None, goal_cond=None, **kwargs):
         """
         x: (B,T,input_dim)
         timestep: (B,) or int, diffusion step
         local_cond: (B,T,local_cond_dim)
         global_cond: (B,global_cond_dim)
+            goal_cond: (B, goal_cond_dim)
         output: (B,T,input_dim)
         """
         sample = einops.rearrange(sample, 'b h t -> b t h')
@@ -228,12 +237,21 @@ class ConditionalUnet1D(nn.Module):
         timesteps = timesteps.expand(sample.shape[0])
 
         global_feature = self.diffusion_step_encoder(timesteps)
-        #print(f"[Info] Golbal feature: {global_feature.shape}")
-        #print(f"[Info] Golbal_cond: {global_cond.shape}")
+        #print(f"[Info] Initial global_feature: {global_feature.shape}")
+        #print(f"[Info] Global_cond: {global_cond.shape}")
         if global_cond is not None:
+            if goal_cond is not None:
+                #print("goal set")
+                global_feature_cond = torch.cat([
+                    global_feature, goal_cond
+                ], axis=-1)
+                #print(f"[Info] global_ftr cat global_cond cat goal_cond {global_feature.shape}") 
             global_feature = torch.cat([
                 global_feature, global_cond
             ], axis=-1)
+            #print(f"[Info] global_ftr cat global_cond {global_feature.shape}")            
+            
+        #print(f"[Info] goal conditioning {goal_cond}")
         #print(f"[Info] Global_features after cat: {global_feature.shape}")
         # encode local features
         h_local = list()
@@ -244,31 +262,33 @@ class ConditionalUnet1D(nn.Module):
             h_local.append(x)
             x = resnet2(local_cond, global_feature)
             h_local.append(x)
-        
+       
+            
+
         x = sample
         #print(f"[Info] trajectory (x) shape: {x.shape}")
         h = []
         for idx, (resnet, resnet2, downsample) in enumerate(self.down_modules):
-            x = resnet(x, global_feature)
+            x = resnet(x, global_feature, global_feature_cond)
             if idx == 0 and len(h_local) > 0:
                 x = x + h_local[0]
-            x = resnet2(x, global_feature)
+            x = resnet2(x, global_feature, global_feature_cond)
             h.append(x)
             x = downsample(x)
 
         for mid_module in self.mid_modules:
-            x = mid_module(x, global_feature)
+            x = mid_module(x, global_feature, global_feature_cond)
 
         for idx, (resnet, resnet2, upsample) in enumerate(self.up_modules):
             x = torch.cat((x, h.pop()), dim=1)
-            x = resnet(x, global_feature)
+            x = resnet(x, global_feature, global_feature_cond)
             # The correct condition should be:
             # if idx == (len(self.up_modules)-1) and len(h_local) > 0:
             # However this change will break compatibility with published checkpoints.
             # Therefore it is left as a comment.
             if idx == len(self.up_modules) and len(h_local) > 0:
                 x = x + h_local[1]
-            x = resnet2(x, global_feature)
+            x = resnet2(x, global_feature, global_feature_cond)
             x = upsample(x)
 
         x = self.final_conv(x)

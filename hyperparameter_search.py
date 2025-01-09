@@ -78,8 +78,8 @@ def get_grid_hparams():
         }
 
 def get_random_hparams():
-    observation_horizon = random.randint(1, 5)
-    action_horizon = random.randint(1, 5)
+    observation_horizon = random.randint(1, 16)
+    action_horizon = random.randint(1, 16)
     return {
         "n_obs_steps": observation_horizon,
         "n_action_steps": action_horizon,
@@ -90,8 +90,8 @@ def get_random_hparams():
 def get_bayesian_hparams(optimizer):
     bayesian_hparams = optimizer.ask()
     return {
-        "n_obs_steps": bayesian_hparams[0],
-        "n_action_steps": bayesian_hparams[1],
+        "n_obs_steps": int(bayesian_hparams[0]),
+        "n_action_steps": int(bayesian_hparams[1]),
         "horizon": MAX_HORIZON,
         "training.num_epochs": TRAIN_EPISODES
     }
@@ -178,7 +178,7 @@ def run_training_and_evaluation(task_name, test_idx, hyperparameters, optimizer=
 
 def run_hyperparameter_tests_bayesian(task_name):
     optimizer = Optimizer(
-        dimensions=[Integer(1, 5), Integer(1, 5)],
+        dimensions=[Integer(1, 15), Integer(1, 15)],
         random_state=42,
         base_estimator="GP"
     )
@@ -246,7 +246,7 @@ def run_hyperparameter_tests_grid(task_name):
 
 def run_hyperparameter_tests(task_name):
     optimizer = Optimizer(
-        dimensions=[Integer(1, 5), Integer(1, 5)],
+        dimensions=[Integer(1, 25), Integer(1, 25)],
         random_state=42,
         base_estimator="GP"
     )

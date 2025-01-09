@@ -45,6 +45,7 @@ n_obs_steps: 2
 name: train_diffusion_goal_lowdim
 obs_as_global_cond: true
 obs_as_local_cond: false
+goal_conditioned: true
 obs_dim: 19
 optimizer:
   _target_: torch.optim.AdamW
@@ -59,21 +60,25 @@ policy:
   _target_: diffusion_policy.policy.diffusion_goal_lowdim_policy.DiffusionGoalLowdimPolicy
   action_dim: 10
   horizon: 16
+  goal_conditioned: true
   model:
-    _target_: diffusion_policy.model.diffusion.conditional_unet1d.ConditionalUnet1D
+    _target_: diffusion_policy.model.diffusion.conditional_goal_unet1d.ConditionalUnet1D
     cond_predict_scale: true
+    goal_conditioned: true
     diffusion_step_embed_dim: 256
     down_dims:
     - 256
     - 512
     - 1024
-    global_cond_dim: 57 #38
+    global_cond_dim: 38 #57
+    goal_cond_dim: 38
     input_dim: 10
     kernel_size: 5
     local_cond_dim: null
     n_groups: 8
   n_action_steps: 8
   n_obs_steps: 2
+  n_to_goal_steps: 2
   noise_scheduler:
     _target_: diffusers.schedulers.scheduling_ddpm.DDPMScheduler
     beta_end: 0.02
@@ -86,7 +91,7 @@ policy:
   num_inference_steps: 100
   oa_step_convention: true
   obs_as_global_cond: true
-  obs_as_local_cond: false
+  obs_as_local_cond: false  
   obs_dim: 19
   pred_action_steps_only: false
 pred_action_steps_only: false
@@ -122,6 +127,7 @@ task:
     n_envs: 28
     n_latency_steps: 0
     n_obs_steps: 2
+    n_to_goal_steps: 2    
     n_test: 50
     n_test_vis: 3
     n_train: 6
@@ -149,7 +155,7 @@ task:
   task_name: lift
 task_name: lift_lowdim
 training:
-  checkpoint_every: 50
+  checkpoint_every: 99
   debug: false
   device: cuda:0
   gradient_accumulate_every: 1

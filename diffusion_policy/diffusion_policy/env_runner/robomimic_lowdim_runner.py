@@ -57,6 +57,7 @@ class RobomimicLowdimRunner(BaseLowdimRunner):
             test_start_seed=10000,
             max_steps=400,
             n_obs_steps=2,
+            n_to_goal_steps=2,
             n_action_steps=8,
             n_latency_steps=0,
             render_hw=(256,256),
@@ -216,6 +217,7 @@ class RobomimicLowdimRunner(BaseLowdimRunner):
         self.fps = fps
         self.crf = crf
         self.n_obs_steps = n_obs_steps
+        self.n_to_goal_steps = n_to_goal_steps
         self.n_action_steps = n_action_steps
         self.n_latency_steps = n_latency_steps
         self.env_n_obs_steps = env_n_obs_steps
@@ -266,7 +268,7 @@ class RobomimicLowdimRunner(BaseLowdimRunner):
             #goal = env.get_goal()
             #print(goal)
             policy.reset()
-            print(f"[Info] obs dim in runner {obs.shape}, {obs[:,:self.n_obs_steps].shape}")
+            #print(f"[Info] obs dim in runner {obs.shape}, {obs[:,:self.n_obs_steps].shape}")
             env_name = self.env_meta['env_name']
             pbar = tqdm.tqdm(total=self.max_steps, desc=f"Eval {env_name}Lowdim {chunk_idx+1}/{n_chunks}", 
                 leave=False, mininterval=self.tqdm_interval_sec)
@@ -278,7 +280,7 @@ class RobomimicLowdimRunner(BaseLowdimRunner):
                     # handle n_latency_steps by discarding the last n_latency_steps
                     'obs': obs[:,:self.n_obs_steps].astype(np.float32)
                 }
-
+                #print(f"[I]o {obs.shape}")
                 
                 if self.past_action and (past_action is not None):
                     # TODO: not tested
@@ -289,12 +291,24 @@ class RobomimicLowdimRunner(BaseLowdimRunner):
                 obs_dict = dict_apply(np_obs_dict, 
                     lambda x: torch.from_numpy(x).to(
                         device=device))
+                
+                #goal_dict = np.tile(goal , )
+                goal_tensor = torch.tensor(goal['obs']) if not isinstance(goal['obs'], torch.Tensor) else goal['obs']
 
+                # Number of repetitions
+                num_repeats = obs.shape[0]
+
+                # Replicate the dictionary along the first dimension
+                goal_replicated = {
+                    'obs': goal_tensor.unsqueeze(0).repeat(num_repeats, 1, 1)  # Add a dimension and repeat 28 times
+                }
+                goal_dict: Dict[str, torch.Tensor] = goal_replicated
+                #print("INfo, ", goal_dict['obs'].shape)
                 # run policy
                 with torch.no_grad():
                     # TODO(Luca - 01): We need to add the goal here as well
                     #print("[INFO]", goal)
-                    action_dict = policy.predict_action(obs_dict, goal)
+                    action_dict = policy.predict_action(obs_dict, goal_dict)
 
                 # device_transfer
                 np_action_dict = dict_apply(action_dict,
@@ -312,7 +326,14 @@ class RobomimicLowdimRunner(BaseLowdimRunner):
                 if self.abs_action:
                     env_action = self.undo_transform_action(action)
 
+                # TODO (Luca): Reinforcement learning agent
+                # final_action = env_action + rl_action 
+
                 obs, reward, done, info = env.step(env_action)
+
+                # TODO (Luca): compute loss and refine rl agent
+                # ppo policy (module with stable baslines library)
+
                 done = np.all(done)
                 past_action = action
 

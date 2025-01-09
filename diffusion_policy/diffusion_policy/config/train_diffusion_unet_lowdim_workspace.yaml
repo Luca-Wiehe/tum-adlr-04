@@ -30,9 +30,9 @@ hydra:
   job:
     override_dirname: ${name}
   run:
-    dir: /home/luca_daniel/tum-adlr-04/data/outputs/tool_hang/hparams_5/
+    dir: /home/luca_daniel/tum-adlr-04/data/outputs/tool_hang/hparams_49/
   sweep:
-    dir: /home/luca_daniel/tum-adlr-04/data/outputs/tool_hang/hparams_5/
+    dir: /home/luca_daniel/tum-adlr-04/data/outputs/tool_hang/hparams_49/
     subdir: ${hydra.job.num}
 keypoint_dim: ${task.keypoint_dim}
 keypoint_visible_rate: 1.0
@@ -48,7 +48,7 @@ logging:
   - ${task_name}
   - ${exp_name}
 multi_run:
-  run_dir: /home/luca_daniel/tum-adlr-04/data/outputs/tool_hang/hparams_5/
+  run_dir: /home/luca_daniel/tum-adlr-04/data/outputs/tool_hang/hparams_49/
   wandb_name_base: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}
 n_action_steps: ${n_action_steps}
 n_latency_steps: 0

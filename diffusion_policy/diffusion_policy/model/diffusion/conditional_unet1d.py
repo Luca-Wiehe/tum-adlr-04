@@ -201,7 +201,7 @@ class ConditionalUnet1D(nn.Module):
 
         global_feature = self.diffusion_step_encoder(timesteps)
         #print(f"[Info] Golbal feature: {global_feature.shape}")
-        #print(f"[Info] Golbal_cond: {global_cond.shape}")
+        #print(f"[INFO] Global_cond: {global_cond.shape}")
         if global_cond is not None:
             global_feature = torch.cat([
                 global_feature, global_cond

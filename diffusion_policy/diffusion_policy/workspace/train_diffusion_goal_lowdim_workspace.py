@@ -208,8 +208,11 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
 
                             # Daniel 
                             if batch['goal'] is not None:
-                                goal = normalizer['obs'].normalize(batch['goal'])  
-                                goal = batch['goal'][:, -1:, :]                              
+                                #goal = normalizer['obs'].normalize(batch['goal'])  
+                                #goal = batch['goal'][:, -1:, :]      
+                                goal = {
+                                    'obs': batch['goal'][np.random.randint(256), 0, :, :]
+                                    }                          
                             #_______
 
                         if (cfg.training.max_train_steps is not None) \
@@ -220,7 +223,8 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
                 # replace train_loss with epoch average
                 train_loss = np.mean(train_losses)
                 step_log['train_loss'] = train_loss
-
+                
+                #print(f"[Info] goal in workspace: {goal.shape}")
                 # ========= eval for this epoch ==========
 
                 policy = self.model
@@ -260,12 +264,17 @@ class TrainDiffusionGoalLowdimWorkspace(BaseWorkspace):
 
                         obs_dict = {
                             'obs': batch['obs'],
-                        }                        
+                        }
+                        #print(f"[Info] obs_dict len {obs_dict['obs'].shape}")
+                        goal_dict = {
+                            'obs': batch['goal'][:, 0, :, :]
+                        }      
+                        #print(f"[Info] goal_dict len {goal_dict['obs'].shape}")                  
             
                         gt_action = batch['action']
                         
                         
-                        result = policy.predict_action(obs_dict, goal) #Daniel - , pass last observarion to prediction method
+                        result = policy.predict_action(obs_dict, goal_dict) #
                         #print("[Info]: Predict action in training phase")
                         if cfg.pred_action_steps_only:
                             pred_action = result['action']
