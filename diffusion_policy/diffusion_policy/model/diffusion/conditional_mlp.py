@@ -59,7 +59,7 @@ class ConditionalMLP(nn.Module):
             nn.Linear(diffusion_step_embed_dim * 4, diffusion_step_embed_dim),
         )
 
-        self.cond_dim = diffusion_step_embed_dim + 38
+        self.cond_dim = diffusion_step_embed_dim + 159
         
         self.layers = nn.ModuleList([
             ConditionalFiLMLayer(input_dim if i == 0 else hidden_dim, hidden_dim, self.cond_dim, cond_predict_scale)

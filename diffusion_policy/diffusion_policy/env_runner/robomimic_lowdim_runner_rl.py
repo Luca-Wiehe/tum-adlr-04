@@ -1,14 +1,157 @@
 import torch
 import numpy as np
+import os
+
+# Robomimic Imports
+import robomimic.utils.file_utils as FileUtils
+import robomimic.utils.env_utils as EnvUtils
+import robomimic.utils.obs_utils as ObsUtils
 
 # Diffusion Policy Imports
+from diffusion_policy.env.robomimic.robomimic_lowdim_wrapper import RobomimicLowdimWrapper
 from diffusion_policy.env_runner.base_lowdim_runner import BaseLowdimRunner
 from diffusion_policy.policy.base_lowdim_policy import BaseLowdimPolicy
+from diffusion_policy.gym_util.multistep_wrapper import MultiStepWrapper
+from diffusion_policy.gym_util.video_recording_wrapper import VideoRecordingWrapper, VideoRecorder
+from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
+from diffusion_policy.model.diffusion.conditional_unet1d import ConditionalUnet1D
+from diffusion_policy.policy.diffusion_unet_lowdim_policy import DiffusionUnetLowdimPolicy
 
 # Reinforcement Learning Imports
 from diffusion_policy.env.robomimic.robomimic_rl_env import RobomimicRLEnv
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
+
+def create_base_env(env_meta, obs_keys):
+    """Helper function to create the base robomimic environment."""
+    ObsUtils.initialize_obs_modality_mapping_from_dict(
+        {'low_dim': obs_keys}
+    )
+    env = EnvUtils.create_env_from_metadata(
+        env_meta=env_meta,
+        render=False,
+        render_offscreen=False,
+        use_image_obs=False
+    )
+    return env
+
+def single_robomimic_env(
+    dataset_path,
+    obs_keys=['robot0_eef_pos', 'robot0_eef_quat', 'robot0_gripper_qpos'],
+    render_hw=(256, 256),
+    render_camera_name='agentview',
+    max_steps=400,
+    n_obs_steps=2,
+    n_action_steps=8,
+    control_delta=True,  # If False, use absolute actions
+    ):
+    """
+    Creates a single Robomimic environment instance with appropriate wrappers.
+    
+    Args:
+        dataset_path (str): Path to the demonstration dataset
+        obs_keys (list): List of observation keys to use
+        render_hw (tuple): Height and width for rendering
+        render_camera_name (str): Name of the camera to use for rendering
+        max_steps (int): Maximum number of steps per episode
+        n_obs_steps (int): Number of observation steps
+        n_action_steps (int): Number of action steps
+        control_delta (bool): Whether to use delta or absolute control
+    
+    Returns:
+        gym.Env: A wrapped Robomimic environment
+    """
+    # Get environment metadata from dataset
+    dataset_path = os.path.expanduser(dataset_path)
+    env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path)
+    
+    # Configure environment settings
+    if not control_delta:
+        env_meta['env_kwargs']['controller_configs']['control_delta'] = False
+    
+    # Create base environment
+    robomimic_env = create_base_env(env_meta=env_meta, obs_keys=obs_keys)
+    
+    # Wrap the environment
+    wrapped_env = MultiStepWrapper(
+        VideoRecordingWrapper(
+            RobomimicLowdimWrapper(
+                env=robomimic_env,
+                obs_keys=obs_keys,
+                init_state=None,  # Will be set during reset if needed
+                render_hw=render_hw,
+                render_camera_name=render_camera_name
+            ),
+            video_recoder=VideoRecorder.create_h264(
+                fps=10,  # Default FPS
+                codec='h264',
+                input_pix_fmt='rgb24',
+                crf=22,  # Default CRF value
+                thread_type='FRAME',
+                thread_count=1
+            ),
+            file_path=None
+        ),
+        n_obs_steps=n_obs_steps,
+        n_action_steps=n_action_steps,
+        max_episode_steps=max_steps
+    )
+
+    return wrapped_env
+
+def initialize_diffusion_policy(checkpoint_path):
+    """
+    Initialize the diffusion policy from a checkpoint.
+    
+    Args:
+        checkpoint_path (str): Path to the checkpoint file
+    
+    Returns:
+        policy (DiffusionUnetLowdimPolicy): The loaded policy
+        device (torch.device): The device the policy is loaded on
+    """
+    # Set up device
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    # Load checkpoint
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    
+    # Extract config from checkpoint
+    config = checkpoint['config']
+    
+    # Initialize noise scheduler
+    noise_scheduler = DDPMScheduler(
+        num_train_timesteps=config.get('horizon', 1000),
+        beta_schedule="squaredcos_cap_v2"
+    )
+    
+    # Initialize the UNet model
+    model = ConditionalUnet1D(
+        input_dim=config.get('action_dim', 7),  # Default for robot arm
+        global_cond_dim=config.get('obs_dim', 21) * config.get('n_obs_steps', 2),  # Observation dimension * steps
+        down_dims=[512, 1024, 2048],
+        cond_predict_scale=True
+    )
+    
+    # Initialize the policy
+    policy = DiffusionUnetLowdimPolicy(
+        model=model,
+        noise_scheduler=noise_scheduler,
+        horizon=config.get('horizon', 1000),
+        obs_dim=config.get('obs_dim', 21),
+        action_dim=config.get('action_dim', 7),
+        n_action_steps=config.get('n_action_steps', 8),
+        n_obs_steps=config.get('n_obs_steps', 2),
+        obs_as_global_cond=True,
+        pred_action_steps_only=True
+    )
+    
+    # Load state dict
+    policy.load_state_dict(checkpoint['model'])
+    policy.to(device)
+    policy.eval()  # Set to evaluation mode
+    
+    return policy, device
 
 class RobomimicLowdimRunnerRL(BaseLowdimRunner):
     """
@@ -121,19 +264,12 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
 
 
 if __name__ == "__main__":
-    # Suppose you have a diffusion policy loaded
-    diffusion_policy = ...  # type: BaseLowdimPolicy
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    diffusion_policy.to(device)
-
-    # Suppose you have a function that creates the standard Robomimic environment
-    def single_robomimic_env():
-        """
-        This should create a single Robomimic environment, 
-        possibly with MultiStepWrapper, etc.
-        """
-        raise NotImplementedError
-
+    checkpoint_path = "/home/luca_daniel/tum-adlr-04/data/outputs/tool_hang/hparams_12/unet/checkpoints/latest.ckpt"
+    
+    # Initialize policy and device
+    diffusion_policy, device = initialize_diffusion_policy(checkpoint_path)
+    
+    # Now you can create your runner
     runner_rl = RobomimicLowdimRunnerRL(
         diffusion_policy=diffusion_policy,
         device=device,
@@ -146,6 +282,3 @@ if __name__ == "__main__":
         n_latency_steps=0,
         log_dir="./rl_logs"
     )
-
-    # Launch the training
-    runner_rl.run()

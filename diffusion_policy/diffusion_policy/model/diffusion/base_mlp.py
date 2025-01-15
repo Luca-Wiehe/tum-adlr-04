@@ -19,7 +19,7 @@ class BaseMLP(nn.Module):
         )
 
         # Calculate total input dimension (including condition) for the first layer
-        self.input_dim = input_dim + diffusion_step_embed_dim + 38  # Assuming global_cond has dim 38
+        self.input_dim = input_dim + diffusion_step_embed_dim + 159  # Assuming global_cond has dim 38
         
         # Define layers
         self.layers = nn.ModuleList([

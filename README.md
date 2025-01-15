@@ -39,13 +39,15 @@ conda init
 sudo apt-get -y install libosmesa6-dev
 ```
 
-## Repository Setup
-Clone our repository using `git clone https://github.com/Luca-Wiehe/tum-adlr-04.git`. 
-You will face an error that a HuggingFace import cannot be resolved. Follow the traceback and remove the import of the corresponding HuggingFace module. Things will work after.
-
-
-## Usage
-Start by executing `cd diffusion_policy` followed by `conda env create -f conda_environment.yaml`.  To activate the environment, perform `conda activate robodiff`.
+## Setup
+Clone our repository using `git clone https://github.com/Luca-Wiehe/tum-adlr-04.git`. Once this is done, continue with environment setup as described below:
+```
+cd diffusion_policy
+conda env create -f conda_environment.yaml
+conda activate robodiff
+pip install stable_baselines3
+LD_LIBRARY_PATH=/usr/local/cuda-11.7/lib64
+```
 
 ### Data Download
 Create a data folder using `cd diffusion_policy && mkdir data && cd data` and download RoboMimic training data using the following code.
@@ -67,13 +69,16 @@ cd <repo_root>
 python ./diffusion_policy/eval.py --checkpoint <ckpt_path> --output_dir <out_path>
 ```
 
-### Training Our Custom Model
-To train our new model, execute the following code:
+### Model Training
+There are several models available for training:
 ```
-python diffusion_policy/train.py --config-dir=./diffusion_policy/task_configurations --config-name=lift_config_ours.yaml training.seed=42 training.device=cuda:0 hydra.run.dir='data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}'
+python diffusion_policy/train.py --config-dir=./diffusion_policy/task_configurations/{task_name} --config-name={task_name}_config_{approach_name}.yaml
 ```
 
+
+
 ### Performing Inference on Our Custom Model
+
 
 ### Executing Hyperparameter Analysis
 One of our primary goals is to test how hyperparameter configurations differ across approaches. To explore hyperparameter configurations in an informed way, we provide code to conduct hyperparameter search.
