@@ -2,8 +2,8 @@
 
 ## Team Members
 
-- Daniel Umbarila (Student - M.Sc. Electrical Engineering and Information Technology - TUM)
-- Luca Wiehe (Student - M.Sc. Robotics, Cognition, Intelligence - TUM)
+- ~~Daniel Umbarila (Student - M.Sc. Electrical Engineering and Information Technology - TUM)~~ (dropped course)
+- [Luca Wiehe](https://scholar.google.com/citations?user=hrh-irUAAAAJ&hl=en&oi=ao) (Student - M.Sc. Robotics, Cognition, Intelligence - TUM)
 
 ## Supervisor
 
@@ -11,7 +11,9 @@
 
 ## Project Description
 
-Repository for the course "Advanced Deep Learning for Robotics" at TUM.
+Repository for the course "Advanced Deep Learning for Robotics" at TUM. This repository extends the paper [*Diffusion Policy: Visuomotor Policy Learning via Action Diffusion*](https://arxiv.org/abs/2303.04137v4) in several ways.
+
+Our experiments include test for important hyperparameters like `observation_horizon` and `action_horizon`, adaptations of the network architectures to check convergence speeds and performance, encoding the goal state to check its impact on performance, and a Reinforcement Learning agent that allows us to generalize to out-of-distribution data.
 
 ## Google Cloud Setup
 In case of doubt, I found [this blogpost](https://askubuntu.com/questions/1077061/how-do-i-install-nvidia-and-cuda-drivers-into-ubuntu/1077063#1077063) very helpful.
@@ -45,8 +47,7 @@ Clone our repository using `git clone https://github.com/Luca-Wiehe/tum-adlr-04.
 cd diffusion_policy
 conda env create -f conda_environment.yaml
 conda activate robodiff
-pip install stable_baselines3
-LD_LIBRARY_PATH=/usr/local/cuda-11.7/lib64
+pip install pytorch==2.0.1
 ```
 
 ### Data Download
@@ -75,9 +76,32 @@ There are several models available for training:
 python diffusion_policy/train.py --config-dir=./diffusion_policy/task_configurations/{task_name} --config-name={task_name}_config_{approach_name}.yaml
 ```
 
+<details>
+<summary>Available values for task_name</summary>
+
+`task_name` | Name | Description
+--- | --- | ---
+`lift` | Lift | The robot needs to lift an object from the desk using its gripper
+`tool_hang` | Tool Hang | The robot needs to hang a tool with a squared cutout onto a pole
+
+</details>
+
+<details>
+<summary>Available values for approach_name</summary>
+
+`approach_name` | Name | Our Contribution | Description
+--- | --- | :---: | ---
+`base_mlp` | Base MLP | X | A simple MLP where past observations are passed without a conditioning mechanism
+`cond_mlp` | Conditioned MLP | X | A simple MLP where past observations are passed to each layer using FiLM-conditioning
+`rl` | Reinforcement Learning | X | A Reinforcement Learning policy that extends Diffusion Policy by modifying predicted actions
+`unet` | Conditional UNet | | A UNet where past observations are passed to each layer using FiLM-conditioning
+`goal` | Goal-Conditioned UNet | X | Same as `unet` but extended through an additional positional encoding to pass the goal state
+`transformer` | Transformer | | A Transformer architecture to realize Diffusion
+
+</details>
 
 
-### Performing Inference on Our Custom Model
+### Model Inference
 
 
 ### Executing Hyperparameter Analysis

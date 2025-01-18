@@ -99,60 +99,6 @@ def single_robomimic_env(
 
     return wrapped_env
 
-def initialize_diffusion_policy(checkpoint_path):
-    """
-    Initialize the diffusion policy from a checkpoint.
-    
-    Args:
-        checkpoint_path (str): Path to the checkpoint file
-    
-    Returns:
-        policy (DiffusionUnetLowdimPolicy): The loaded policy
-        device (torch.device): The device the policy is loaded on
-    """
-    # Set up device
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
-    # Load checkpoint
-    checkpoint = torch.load(checkpoint_path, map_location=device)
-    
-    # Extract config from checkpoint
-    config = checkpoint['config']
-    
-    # Initialize noise scheduler
-    noise_scheduler = DDPMScheduler(
-        num_train_timesteps=config.get('horizon', 1000),
-        beta_schedule="squaredcos_cap_v2"
-    )
-    
-    # Initialize the UNet model
-    model = ConditionalUnet1D(
-        input_dim=config.get('action_dim', 7),  # Default for robot arm
-        global_cond_dim=config.get('obs_dim', 21) * config.get('n_obs_steps', 2),  # Observation dimension * steps
-        down_dims=[512, 1024, 2048],
-        cond_predict_scale=True
-    )
-    
-    # Initialize the policy
-    policy = DiffusionUnetLowdimPolicy(
-        model=model,
-        noise_scheduler=noise_scheduler,
-        horizon=config.get('horizon', 1000),
-        obs_dim=config.get('obs_dim', 21),
-        action_dim=config.get('action_dim', 7),
-        n_action_steps=config.get('n_action_steps', 8),
-        n_obs_steps=config.get('n_obs_steps', 2),
-        obs_as_global_cond=True,
-        pred_action_steps_only=True
-    )
-    
-    # Load state dict
-    policy.load_state_dict(checkpoint['model'])
-    policy.to(device)
-    policy.eval()  # Set to evaluation mode
-    
-    return policy, device
-
 class RobomimicLowdimRunnerRL(BaseLowdimRunner):
     """
     A runner that demonstrates how to train an RL agent (PPO) to refine actions
@@ -161,9 +107,9 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
 
     def __init__(
         self,
+        dataset_path,
         diffusion_policy: BaseLowdimPolicy,
         device: torch.device,
-        robomimic_env_fn,
         abs_action=False,
         rotation_transformer=None,
         total_timesteps=10000,
@@ -186,6 +132,7 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         """
         super().__init__(log_dir)  # If you want to store logs in BaseLowdimRunner
         
+        self.dataset_path = dataset_path
         self.diffusion_policy = diffusion_policy
         self.device = device
         self.abs_action = abs_action
@@ -199,7 +146,8 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         # Create the RL training environment
         def make_env():
             return RobomimicRLEnv(
-                robomimic_env_fn=robomimic_env_fn,
+                robomimic_env_fn=single_robomimic_env,
+                dataset_path=self.dataset_path,
                 diffusion_policy=self.diffusion_policy,
                 device=self.device,
                 abs_action=self.abs_action,
@@ -249,37 +197,3 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         mean_reward = np.mean(episode_rewards)
         print(f"Evaluated {n_episodes} episodes, mean reward = {mean_reward}")
         return mean_reward
-
-    def run(self):
-        """
-        A possible override of BaseLowdimRunner's run method to 
-        (1) train RL, then (2) evaluate the refined policy.
-        """
-        print("[INFO] Starting PPO training to refine diffusion policy actions...")
-        self.run_training()
-        print("[INFO] Training complete. Now evaluating the refined policy...")
-        mean_reward = self.evaluate(n_episodes=5)
-        print(f"[INFO] Final mean reward after PPO refinement: {mean_reward}")
-        return mean_reward
-
-
-if __name__ == "__main__":
-    checkpoint_path = "/home/luca_daniel/tum-adlr-04/data/outputs/tool_hang/hparams_12/unet/checkpoints/latest.ckpt"
-    
-    # Initialize policy and device
-    diffusion_policy, device = initialize_diffusion_policy(checkpoint_path)
-    
-    # Now you can create your runner
-    runner_rl = RobomimicLowdimRunnerRL(
-        diffusion_policy=diffusion_policy,
-        device=device,
-        robomimic_env_fn=single_robomimic_env,
-        abs_action=False,
-        rotation_transformer=None,
-        total_timesteps=5000,
-        max_episode_steps=400,
-        n_obs_steps=2,
-        n_latency_steps=0,
-        log_dir="./rl_logs"
-    )
-    

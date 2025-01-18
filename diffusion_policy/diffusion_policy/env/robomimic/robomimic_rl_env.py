@@ -22,6 +22,7 @@ class RobomimicRLEnv(gym.Env):
     def __init__(
         self,
         robomimic_env_fn,
+        dataset_path,
         diffusion_policy: BaseLowdimPolicy,
         device: torch.device,
         abs_action: bool = False,
@@ -32,7 +33,7 @@ class RobomimicRLEnv(gym.Env):
     ):
         super().__init__()
         # Create the underlying Robomimic environment (single env instance)
-        self.underlying_env = robomimic_env_fn()
+        self.underlying_env = robomimic_env_fn(dataset_path)
 
         # Store references / configs
         self.diffusion_policy = diffusion_policy
@@ -84,7 +85,9 @@ class RobomimicRLEnv(gym.Env):
         3. Step the underlying environment.
         """
         # 1. Build diffusion policy input
-        raw_obs = self.underlying_env.observation  # shape: (n_obs_steps, obs_dim) or similar
+        raw_obs = self.underlying_env.get_observation()
+        print(f"[INFO] raw_obs: {raw_obs}")
+        # raw_obs is [-0.08624746 -0.01178543  1.02332948  0.99703284 -0.01962336  0.07441968 0.00146845  0.020833   -0.020833  ]
         np_obs_dict = {'obs': raw_obs[:, :self.n_obs_steps].astype(np.float32)}
         obs_dict = dict_apply(
             np_obs_dict, 
@@ -93,14 +96,11 @@ class RobomimicRLEnv(gym.Env):
 
         with torch.no_grad():
             action_dict = self.diffusion_policy.predict_action(obs_dict, goal=None)
-        diffusion_action = action_dict['action'].cpu().numpy()  # shape: (1, n_obs_steps, act_dim) maybe
+        diffusion_action = action_dict['action'].cpu().numpy()
 
         # We discard the first self.n_latency_steps if needed
         diffusion_action = diffusion_action[:, self.n_latency_steps:]  # shape: (1, effective_steps, act_dim)
 
-        # Flatten the diffusion action to shape (act_dim,) 
-        # or take the last sub-step's action if that's how your system is set up.
-        # For demonstration, let's just take the last predicted step.
         final_diffusion_action = diffusion_action[0, -1]
 
         if self.abs_action and (self.rotation_transformer is not None):

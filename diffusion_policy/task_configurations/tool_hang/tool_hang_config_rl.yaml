@@ -5,7 +5,8 @@ obs_dim: 53
 # Policy configuration
 policy:
   checkpoint_path: /home/luca_daniel/tum-adlr-04/data/outputs/tool_hang/hparams_12/unet/checkpoints/latest.ckpt
-  model_config:
+  _target_: diffusion_policy.policy.diffusion_unet_lowdim_policy.DiffusionUnetLowdimPolicy
+  params:
     action_dim: 10
     obs_dim: 53
     horizon: 16
@@ -13,23 +14,37 @@ policy:
     n_obs_steps: 3
     obs_as_global_cond: true
     obs_as_local_cond: false
+  model:
+    _target_: diffusion_policy.model.diffusion.conditional_unet1d.ConditionalUnet1D
+    cond_predict_scale: true
+    diffusion_step_embed_dim: 256
+    down_dims:
+    - 256
+    - 512
+    - 1024
+    global_cond_dim: 159
+    input_dim: 10
+    kernel_size: 5
+    local_cond_dim: null
+    n_groups: 8
+  noise_scheduler:
+    _target_: diffusers.schedulers.scheduling_ddpm.DDPMScheduler
+    beta_end: 0.02
+    beta_schedule: squaredcos_cap_v2
+    beta_start: 0.0001
+    clip_sample: true
+    num_train_timesteps: 100
+    prediction_type: epsilon
+    variance_type: fixed_small
 
 # Task configuration
 task:
   env_runner:
     _target_: diffusion_policy.env_runner.robomimic_lowdim_runner_rl.RobomimicLowdimRunnerRL
+    device: cuda:0
     abs_action: true
     dataset_path: data/robomimic/datasets/tool_hang/ph/low_dim_abs.hdf5
-    max_steps: 700
-    n_action_steps: 3
     n_obs_steps: 3
-    n_envs: 28
-    obs_keys:
-      - object
-      - robot0_eef_pos
-      - robot0_eef_quat
-      - robot0_gripper_qpos
-    render_hw: [128, 128]
 
 # Training configuration
 training:

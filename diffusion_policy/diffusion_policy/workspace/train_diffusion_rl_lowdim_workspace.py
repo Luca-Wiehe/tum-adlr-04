@@ -6,10 +6,9 @@ import pathlib
 import numpy as np
 import random
 import wandb
-import tqdm
+import dill
 
 from diffusion_policy.workspace.base_workspace import BaseWorkspace
-from diffusion_policy.policy.diffusion_unet_lowdim_policy import DiffusionUnetLowdimPolicy
 from diffusion_policy.env_runner.base_lowdim_runner import BaseLowdimRunner
 from diffusion_policy.common.json_logger import JsonLogger
 
@@ -28,10 +27,22 @@ class TrainRLWorkspace(BaseWorkspace):
         random.seed(seed)
 
         # Load pretrained diffusion policy
-        self.diffusion_policy = DiffusionUnetLowdimPolicy(**cfg.policy.model_config)
-        checkpoint = torch.load(cfg.policy.checkpoint_path)
-        self.diffusion_policy.load_state_dict(checkpoint['model'])
-        self.diffusion_policy.eval()  # Set to evaluation mode
+        # First instantiate the model and scheduler
+        model = hydra.utils.instantiate(cfg.policy.model)
+        noise_scheduler = hydra.utils.instantiate(cfg.policy.noise_scheduler)
+        
+        # Initialize the policy using the params from config
+        self.diffusion_policy = hydra.utils.instantiate(
+            cfg.policy,
+            model=model,
+            noise_scheduler=noise_scheduler,
+            **cfg.policy.params
+        )
+        
+        # Load checkpoint
+        path = pathlib.Path(cfg.policy.checkpoint_path)
+        checkpoint = torch.load(path.open('rb'), pickle_module=dill)
+        self.diffusion_policy.load_state_dict(checkpoint['state_dicts']['model'])
 
         # Training state
         self.global_step = 0
@@ -44,8 +55,7 @@ class TrainRLWorkspace(BaseWorkspace):
         env_runner: BaseLowdimRunner
         env_runner = hydra.utils.instantiate(
             cfg.task.env_runner,
-            diffusion_policy=self.diffusion_policy,
-            output_dir=self.output_dir
+            diffusion_policy=self.diffusion_policy
         )
 
         # Configure logging
@@ -69,9 +79,7 @@ class TrainRLWorkspace(BaseWorkspace):
         with JsonLogger(log_path) as json_logger:
             for epoch in range(cfg.training.num_epochs):
                 # Train RL agent
-                train_metrics = env_runner.run_training(
-                    n_steps=cfg.training.steps_per_epoch
-                )
+                train_metrics = env_runner.run_training()
                 
                 # Evaluate
                 if (epoch % cfg.training.eval_every) == 0:
