@@ -18,11 +18,10 @@ class RobomimicRLEnv(gym.Env):
     This environment computes the initial diffusion-based action internally,
     then expects an RL action which is used to refine the final action.
     """
-
-    def __init__(
-        self,
+    def __init__(self, 
         robomimic_env_fn,
         dataset_path,
+        obs_keys,
         diffusion_policy: BaseLowdimPolicy,
         device: torch.device,
         abs_action: bool = False,
@@ -32,9 +31,10 @@ class RobomimicRLEnv(gym.Env):
         n_latency_steps: int = 0
     ):
         super().__init__()
-        # Create the underlying Robomimic environment (single env instance)
-        self.underlying_env = robomimic_env_fn(dataset_path)
-
+        
+        # Create the underlying Robomimic environment
+        self.underlying_env = robomimic_env_fn(dataset_path, obs_keys)
+        
         # Store references / configs
         self.diffusion_policy = diffusion_policy
         self.device = device
@@ -45,71 +45,61 @@ class RobomimicRLEnv(gym.Env):
         self.n_latency_steps = n_latency_steps
         self.current_step = 0
 
-        # Infer observation space and action space from underlying_env
-        # You will likely need to adapt these to match exactly what your policy
-        # and environment require. For example, if the observation is
-        # something like obs[:, :self.n_obs_steps], etc. 
-        # For demonstration, let's assume the environment returns something like:
-        #   observation shape = (some_dim,) 
-        #   and action shape = (action_dim,)
-        sample_obs = self.reset()
-        obs_dim = sample_obs.shape[0]
-        # For the RL agent, the "refinement" action is the same dimension as the env's raw action
-        # If the environment has action_dim, we let the RL agent produce an action_dim vector
-        # which is then added to the diffusion-based action
+        # Get sample observation to determine dimension
+        sample_obs = self._flatten_obs(self.underlying_env.reset())  # Apply flattening here
+        obs_dim = sample_obs.shape[0]  # This will be 106
         action_dim = self.underlying_env.action_space.shape[0]
 
+        # Update observation space to match flattened dimension
         self.observation_space = spaces.Box(
-            low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32
+            low=-np.inf, 
+            high=np.inf, 
+            shape=(obs_dim,),
+            dtype=np.float32
         )
+        
         self.action_space = spaces.Box(
-            low=-1.0, high=1.0, shape=(action_dim,), dtype=np.float32
+            low=-1.0, 
+            high=1.0, 
+            shape=(action_dim,), 
+            dtype=np.float32
         )
 
     def reset(self):
         """
-        Reset the environment and diffusion policy.
+        Reset the environment and return flattened observation.
         """
         self.diffusion_policy.reset()
         obs = self.underlying_env.reset()
         self.current_step = 0
-
-        # Extract the first self.n_obs_steps from obs (if needed), or flatten them.
-        # Here, we just flatten everything for demonstration.
-        return self._flatten_obs(obs)
+        return self._flatten_obs(obs)  # Return flattened observation
 
     def step(self, rl_refinement_action):
         """
-        1. Compute the diffusion-based action from the current observation.
-        2. Combine it with the RL refinement action.
-        3. Step the underlying environment.
+        Step the environment and return flattened observation.
         """
-        # 1. Build diffusion policy input
+        # Build diffusion policy input
         raw_obs = self.underlying_env.get_observation()
-        print(f"[INFO] raw_obs: {raw_obs}")
-        # raw_obs is [-0.08624746 -0.01178543  1.02332948  0.99703284 -0.01962336  0.07441968 0.00146845  0.020833   -0.020833  ]
+        
+        # Create observation dict for diffusion policy
         np_obs_dict = {'obs': raw_obs[:, :self.n_obs_steps].astype(np.float32)}
         obs_dict = dict_apply(
             np_obs_dict, 
             lambda x: torch.from_numpy(x).to(device=self.device)
         )
 
+        # Get diffusion action
         with torch.no_grad():
             action_dict = self.diffusion_policy.predict_action(obs_dict, goal=None)
         diffusion_action = action_dict['action'].cpu().numpy()
-
-        # We discard the first self.n_latency_steps if needed
-        diffusion_action = diffusion_action[:, self.n_latency_steps:]  # shape: (1, effective_steps, act_dim)
-
+        diffusion_action = diffusion_action[:, self.n_latency_steps:]
         final_diffusion_action = diffusion_action[0, -1]
 
         if self.abs_action and (self.rotation_transformer is not None):
             final_diffusion_action = self._undo_transform_action(final_diffusion_action)
 
-        # 2. Combine RL refinement with the diffusion-based action
+        # Combine actions and step environment
         final_action = final_diffusion_action + rl_refinement_action
-        
-        # 3. Step underlying environment
         obs, reward, done, info = self.underlying_env.step(final_action)
         self.current_step += 1
 
@@ -118,25 +108,19 @@ class RobomimicRLEnv(gym.Env):
 
         return self._flatten_obs(obs), float(reward), done, info
 
-    def render(self, mode="human"):
-        return self.underlying_env.render(mode=mode)
-
     def _flatten_obs(self, obs):
         """
-        Flatten or reshape the observation from the underlying environment
-        to match the declared observation_space. Adjust as needed.
+        Ensure consistent flattening of observation.
         """
-        # Suppose the MultiStepWrapper returns shape (n_obs_steps, obs_dim).
-        # We can flatten it:
-        return obs.flatten().astype(np.float32)
+        flat_obs = obs.reshape(-1).astype(np.float32)  # Flatten to 1D array
+        assert flat_obs.shape[0] == 106, f"Expected flattened obs shape (106,), got {flat_obs.shape}"
+        return flat_obs
 
     def _undo_transform_action(self, action):
         """
         Undo rotation transformation for absolute actions (similar logic to
         RobomimicLowdimRunner's undo_transform_action).
         """
-        # If single-arm, the shape might be (7,) e.g. (pos(3), rot(3 or 4?), gripper(1)).
-        # Adjust as needed for your environment. This is just a placeholder.
         if self.rotation_transformer is None:
             return action
         d_rot = action.shape[-1] - 4

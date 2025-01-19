@@ -108,6 +108,7 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
     def __init__(
         self,
         dataset_path,
+        obs_keys,
         diffusion_policy: BaseLowdimPolicy,
         device: torch.device,
         abs_action=False,
@@ -116,7 +117,7 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         max_episode_steps=400,
         n_obs_steps=2,
         n_latency_steps=0,
-        log_dir="./rl_logs"
+        log_dir="./data/rl_logs"
     ):
         """
         :param diffusion_policy: a diffusion-based policy that we'll refine
@@ -133,6 +134,7 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         super().__init__(log_dir)  # If you want to store logs in BaseLowdimRunner
         
         self.dataset_path = dataset_path
+        self.obs_keys = obs_keys
         self.diffusion_policy = diffusion_policy
         self.device = device
         self.abs_action = abs_action
@@ -147,6 +149,7 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         def make_env():
             return RobomimicRLEnv(
                 robomimic_env_fn=single_robomimic_env,
+                obs_keys=obs_keys,
                 dataset_path=self.dataset_path,
                 diffusion_policy=self.diffusion_policy,
                 device=self.device,

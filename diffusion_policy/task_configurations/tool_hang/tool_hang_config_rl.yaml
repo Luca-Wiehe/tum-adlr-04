@@ -44,6 +44,11 @@ task:
     device: cuda:0
     abs_action: true
     dataset_path: data/robomimic/datasets/tool_hang/ph/low_dim_abs.hdf5
+    obs_keys:
+    - object
+    - robot0_eef_pos
+    - robot0_eef_quat
+    - robot0_gripper_qpos
     n_obs_steps: 3
 
 # Training configuration
