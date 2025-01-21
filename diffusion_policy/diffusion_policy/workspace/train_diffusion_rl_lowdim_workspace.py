@@ -35,12 +35,11 @@ class TrainRLWorkspace(BaseWorkspace):
         self.diffusion_policy = hydra.utils.instantiate(
             cfg.policy,
             model=model,
-            noise_scheduler=noise_scheduler,
-            **cfg.policy.params
+            noise_scheduler=noise_scheduler
         )
         
         # Load checkpoint
-        path = pathlib.Path(cfg.policy.checkpoint_path)
+        path = pathlib.Path(cfg.diffusion_ckpt)
         checkpoint = torch.load(path.open('rb'), pickle_module=dill)
         self.diffusion_policy.load_state_dict(checkpoint['state_dicts']['model'])
 

@@ -8,25 +8,27 @@ import robomimic.utils.env_utils as EnvUtils
 import robomimic.utils.obs_utils as ObsUtils
 
 # Diffusion Policy Imports
+from diffusion_policy.model.common.rotation_transformer import RotationTransformer
 from diffusion_policy.env.robomimic.robomimic_lowdim_wrapper import RobomimicLowdimWrapper
 from diffusion_policy.env_runner.base_lowdim_runner import BaseLowdimRunner
 from diffusion_policy.policy.base_lowdim_policy import BaseLowdimPolicy
 from diffusion_policy.gym_util.multistep_wrapper import MultiStepWrapper
 from diffusion_policy.gym_util.video_recording_wrapper import VideoRecordingWrapper, VideoRecorder
-from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
-from diffusion_policy.model.diffusion.conditional_unet1d import ConditionalUnet1D
-from diffusion_policy.policy.diffusion_unet_lowdim_policy import DiffusionUnetLowdimPolicy
 
 # Reinforcement Learning Imports
 from diffusion_policy.env.robomimic.robomimic_rl_env import RobomimicRLEnv
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 
-def create_base_env(env_meta, obs_keys):
+def create_base_env(env_meta, obs_keys, abs_action):
     """Helper function to create the base robomimic environment."""
     ObsUtils.initialize_obs_modality_mapping_from_dict(
         {'low_dim': obs_keys}
     )
+
+    if abs_action:
+        env_meta['env_kwargs']['controller_configs']['control_delta'] = False
+
     env = EnvUtils.create_env_from_metadata(
         env_meta=env_meta,
         render=False,
@@ -42,8 +44,8 @@ def single_robomimic_env(
     render_camera_name='agentview',
     max_steps=400,
     n_obs_steps=2,
-    n_action_steps=8,
-    control_delta=True,  # If False, use absolute actions
+    n_action_steps=2,
+    abs_action=False
     ):
     """
     Creates a single Robomimic environment instance with appropriate wrappers.
@@ -65,12 +67,8 @@ def single_robomimic_env(
     dataset_path = os.path.expanduser(dataset_path)
     env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path)
     
-    # Configure environment settings
-    if not control_delta:
-        env_meta['env_kwargs']['controller_configs']['control_delta'] = False
-    
     # Create base environment
-    robomimic_env = create_base_env(env_meta=env_meta, obs_keys=obs_keys)
+    robomimic_env = create_base_env(env_meta=env_meta, obs_keys=obs_keys, abs_action=abs_action)
     
     # Wrap the environment
     wrapped_env = MultiStepWrapper(
@@ -109,6 +107,7 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         self,
         dataset_path,
         obs_keys,
+        action_dim,
         diffusion_policy: BaseLowdimPolicy,
         device: torch.device,
         abs_action=False,
@@ -116,6 +115,7 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         total_timesteps=10000,
         max_episode_steps=400,
         n_obs_steps=2,
+        n_action_steps=2,
         n_latency_steps=0,
         log_dir="./data/rl_logs"
     ):
@@ -135,6 +135,7 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         
         self.dataset_path = dataset_path
         self.obs_keys = obs_keys
+        self.action_dim = action_dim
         self.diffusion_policy = diffusion_policy
         self.device = device
         self.abs_action = abs_action
@@ -142,8 +143,12 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         self.total_timesteps = total_timesteps
         self.max_episode_steps = max_episode_steps
         self.n_obs_steps = n_obs_steps
+        self.n_action_steps = n_action_steps
         self.n_latency_steps = n_latency_steps
         self.log_dir = log_dir
+
+        if self.abs_action:
+            self.rotation_transformer = RotationTransformer('axis_angle', 'rotation_6d')
 
         # Create the RL training environment
         def make_env():
@@ -157,11 +162,11 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
                 rotation_transformer=self.rotation_transformer,
                 max_episode_steps=self.max_episode_steps,
                 n_obs_steps=self.n_obs_steps,
+                action_dim=action_dim,
+                n_action_steps=self.n_action_steps,
                 n_latency_steps=self.n_latency_steps
             )
 
-        # DummyVecEnv is a Stable-Baselines3 helper for vectorized environment,
-        # but here we only create a single env instance for simplicity.
         self.training_env = DummyVecEnv([make_env])
 
         # Create PPO model
@@ -192,6 +197,7 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
             while not done:
                 # RL agent picks a refinement action
                 action, _ = self.model.predict(obs)
+
                 # Environment will combine it with the diffusion policy internally
                 obs, reward, done, info = env.step(action)
                 total_reward += reward

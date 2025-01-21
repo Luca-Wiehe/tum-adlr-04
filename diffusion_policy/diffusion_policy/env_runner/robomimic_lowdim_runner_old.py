@@ -107,7 +107,7 @@ class RobomimicLowdimRunner(BaseLowdimRunner):
         rotation_transformer = None
         if abs_action:
             env_meta['env_kwargs']['controller_configs']['control_delta'] = False
-            rotation_transformer = RotationTransformer('axis_angle', 'rotation_6d')
+            self.rotation_transformer = RotationTransformer('axis_angle', 'rotation_6d')
 
         def env_fn():
             robomimic_env = create_env(
