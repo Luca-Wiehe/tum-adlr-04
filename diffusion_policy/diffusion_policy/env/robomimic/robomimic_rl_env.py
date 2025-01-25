@@ -130,7 +130,7 @@ class RobomimicRLEnv(gym.Env):
             else:
                 print("[DEBUG] Attention! No RotationTransformer was found")
 
-        print(f"[DEBUG] action.shape in RobomimicRLEnv.step(): {final_action.shape}")
+        final_action = [final_action]
         obs, reward, done, info = self.underlying_env.step(final_action)
         self.current_step += 1
 

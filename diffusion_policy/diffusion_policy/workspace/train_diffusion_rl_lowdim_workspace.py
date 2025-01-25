@@ -7,6 +7,7 @@ import numpy as np
 import random
 import wandb
 import dill
+from tqdm import tqdm
 
 from diffusion_policy.workspace.base_workspace import BaseWorkspace
 from diffusion_policy.env_runner.base_lowdim_runner import BaseLowdimRunner
@@ -76,7 +77,7 @@ class TrainRLWorkspace(BaseWorkspace):
         # Training and evaluation loop
         log_path = os.path.join(self.output_dir, 'logs.json.txt')
         with JsonLogger(log_path) as json_logger:
-            for epoch in range(cfg.training.num_epochs):
+            for epoch in tqdm(range(cfg.training.num_epochs)):
                 # Train RL agent
                 train_metrics = env_runner.run_training()
                 

@@ -6,3 +6,4 @@ __pycache__
 .mp4
 /outputs/
 /diffusion_policy.egg-info
+.vscode

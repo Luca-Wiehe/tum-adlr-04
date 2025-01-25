@@ -112,7 +112,7 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         device: torch.device,
         abs_action=False,
         rotation_transformer=None,
-        total_timesteps=10000,
+        total_timesteps=10_000,
         max_episode_steps=400,
         n_obs_steps=2,
         n_action_steps=2,
@@ -131,7 +131,7 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         :param n_latency_steps: how many action steps to discard for latency
         :param log_dir: path to directory for saving PPO logs
         """
-        super().__init__(log_dir)  # If you want to store logs in BaseLowdimRunner
+        super().__init__(log_dir)
         
         self.dataset_path = dataset_path
         self.obs_keys = obs_keys
@@ -181,9 +181,9 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         """
         Train the RL agent (PPO) for `self.total_timesteps`.
         """
-        self.model.learn(total_timesteps=self.total_timesteps)
+        self.model.learn(total_timesteps=self.total_timesteps, progress_bar=True)
 
-    def evaluate(self, n_episodes=5):
+    def evaluate(self, n_episodes=100):
         """
         Evaluate the RL-refined policy for a few episodes.
         """
@@ -191,7 +191,7 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         episode_rewards = []
 
         for ep in range(n_episodes):
-            obs = env.reset()
+            obs, _ = env.reset()
             done = False
             total_reward = 0
             while not done:
@@ -199,7 +199,8 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
                 action, _ = self.model.predict(obs)
 
                 # Environment will combine it with the diffusion policy internally
-                obs, reward, done, info = env.step(action)
+                obs, reward, terminated, truncated, info = env.step(action)
+                done = terminated or truncated
                 total_reward += reward
             episode_rewards.append(total_reward)
 
