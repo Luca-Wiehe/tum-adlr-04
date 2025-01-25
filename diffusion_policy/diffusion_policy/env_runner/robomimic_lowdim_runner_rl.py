@@ -183,6 +183,15 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         """
         self.model.learn(total_timesteps=self.total_timesteps, progress_bar=True)
 
+    def save_checkpoint(self, save_dir: str, epoch: int):
+        """
+        Save the current PPO model to `save_dir` with an epoch-based filename.
+        """
+        os.makedirs(save_dir, exist_ok=True)  # Ensure directory exists
+        checkpoint_path = os.path.join(save_dir, f"ppo_checkpoint_{epoch}.zip")
+        self.model.save(checkpoint_path)
+        print(f"[INFO] Saved PPO checkpoint to {checkpoint_path}")
+
     def evaluate(self, n_episodes=100):
         """
         Evaluate the RL-refined policy for a few episodes.
@@ -207,3 +216,6 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         mean_reward = np.mean(episode_rewards)
         print(f"Evaluated {n_episodes} episodes, mean reward = {mean_reward}")
         return mean_reward
+
+
+
