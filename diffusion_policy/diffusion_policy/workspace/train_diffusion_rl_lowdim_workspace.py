@@ -82,7 +82,7 @@ class TrainRLWorkspace(BaseWorkspace):
                 train_metrics = env_runner.run_training()
                 
                 # Evaluate
-                if (epoch % cfg.training.eval_every) == 0:
+                if ((epoch + 1) % cfg.training.eval_every) == 0:
                     eval_metrics = env_runner.evaluate(
                         n_episodes=cfg.training.eval_episodes
                     )

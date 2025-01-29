@@ -51,7 +51,7 @@ task:
     action_dim: 10
     n_obs_steps: 3
     n_action_steps: 3
-    total_timesteps: 10_000
+    total_timesteps: 2_000
 
 # Training configuration
 training:
@@ -60,7 +60,7 @@ training:
   num_epochs: 1000
   steps_per_epoch: 1000
   eval_every: 5
-  eval_episodes: 10
+  eval_episodes: 3
 
 # Logging configuration
 logging:
