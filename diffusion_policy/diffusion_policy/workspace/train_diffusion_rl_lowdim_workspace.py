@@ -98,7 +98,7 @@ class TrainRLWorkspace(BaseWorkspace):
                     wandb_run.log(step_log, step=self.global_step)
                     json_logger.log(step_log)
                 
-                if (epoch + 1) % 100 == 0:
+                if (epoch + 1) % cfg.training.checkpoint_every == 0:
                     env_runner.save_checkpoint(save_dir=str(self.output_dir), epoch=epoch + 1)
 
                 self.global_step += cfg.training.steps_per_epoch

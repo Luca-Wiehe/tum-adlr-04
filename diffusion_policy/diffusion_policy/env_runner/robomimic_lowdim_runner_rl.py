@@ -125,7 +125,7 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         n_action_steps=2,
         n_latency_steps=0,
         log_dir="./data/rl_logs",
-        num_envs=4
+        num_envs=16
     ):
         """
         :param dataset_path: path to the robomimic dataset
@@ -213,6 +213,7 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
             policy="MlpPolicy",
             env=self.training_env,
             verbose=1,
+            n_steps=400,
             tensorboard_log=self.output_dir
         )
 
@@ -238,32 +239,20 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         print(f"[INFO] Saved PPO checkpoint to {checkpoint_path}")
 
     def evaluate(self, n_episodes=5):
-        """
-        Evaluate the RL-refined policy for a few episodes on a single environment
-        (the first environment in the SubprocVecEnv).
-        
-        Return a dictionary for wandb logging.
-        """
-        # Temporarily switch to a single environment to do evaluation
-        # by grabbing the first underlying environment
         env = self.eval_env
         episode_rewards = []
 
         for ep in tqdm(range(n_episodes), desc="Evaluating"):
-            obs, _ = env.reset()
+            obs = env.reset()
             done = False
             total_reward = 0
             while not done:
-                # RL agent picks a refinement action
                 action, _ = self.model.predict(obs)
-                # Environment will combine it with the diffusion policy internally
-                obs, reward, terminated, truncated, info = env.step(action)
-                done = terminated or truncated
+                obs, reward, done, info = env.step(action)
                 total_reward += reward
             episode_rewards.append(total_reward)
 
         mean_reward = float(np.mean(episode_rewards))
-        print(f"Evaluated {n_episodes} episodes, mean reward = {mean_reward}")
         return {
             "eval_episodes": n_episodes,
             "mean_reward": mean_reward

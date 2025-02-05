@@ -1,6 +1,7 @@
 # General Imports
 import torch
 import numpy as np
+import time
 
 # Diffusion Policy Imports
 from diffusion_policy.policy.base_lowdim_policy import BaseLowdimPolicy
@@ -95,6 +96,7 @@ class RobomimicRLEnv(gym.Env):
         """
         Step the environment and return flattened observation.
         """
+        start_time = time.perf_counter()
         # Get single observation (shape: (53,))
         raw_obs = self.underlying_env.get_observation()
         
@@ -121,7 +123,7 @@ class RobomimicRLEnv(gym.Env):
         final_diffusion_action = diffusion_action[0, -1]
 
         # Combine actions and step environment
-        final_action = final_diffusion_action + rl_refinement_action
+        final_action = final_diffusion_action + 0.05 * rl_refinement_action
 
         # final_action has shape (10,) but we need (7,) for compatibility with Robomimic Environment
         if self.abs_action:
@@ -133,9 +135,11 @@ class RobomimicRLEnv(gym.Env):
         final_action = [final_action]
         obs, reward, done, info = self.underlying_env.step(final_action)
         self.current_step += 1
-
+    
         if self.current_step >= self.max_episode_steps:
             done = True
+
+        end_time = time.perf_counter()
 
         return obs.reshape(-1).astype(np.float32), float(reward), done, info
 

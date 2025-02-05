@@ -304,6 +304,7 @@ class RobomimicLowdimRunner(BaseLowdimRunner):
                 # step env
                 env_action = action
                 if self.abs_action:
+                    self.rotation_transformer = RotationTransformer('axis_angle', 'rotation_6d')
                     env_action = self.undo_transform_action(action)
 
                 obs, reward, done, info = env.step(env_action)

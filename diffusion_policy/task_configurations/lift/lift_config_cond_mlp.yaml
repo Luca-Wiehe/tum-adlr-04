@@ -39,9 +39,9 @@ logging:
 multi_run:
   run_dir: data/outputs/2023.02.23/19.52.27_train_diffusion_ours_lowdim_lift_lowdim
   wandb_name_base: train_diffusion_ours_lowdim_lift_lowdim
-n_action_steps: 8
+n_action_steps: 3
 n_latency_steps: 0
-n_obs_steps: 2
+n_obs_steps: 3
 name: train_diffusion_ours_lowdim
 obs_as_global_cond: true
 obs_as_local_cond: false
@@ -64,8 +64,9 @@ policy:
     cond_predict_scale: true
     diffusion_step_embed_dim: 256
     input_dim: 10
+    cond_dim: 57
   n_action_steps: 8
-  n_obs_steps: 2
+  n_obs_steps: 3
   noise_scheduler:
     _target_: diffusers.schedulers.scheduling_ddpm.DDPMScheduler
     beta_end: 0.02
@@ -110,10 +111,10 @@ task:
     dataset_path: data/robomimic/datasets/lift/ph/low_dim_abs.hdf5
     fps: 10
     max_steps: 400
-    n_action_steps: 8
+    n_action_steps: 3
     n_envs: 28
     n_latency_steps: 0
-    n_obs_steps: 2
+    n_obs_steps: 3
     n_test: 50
     n_test_vis: 3
     n_train: 6
@@ -141,7 +142,7 @@ task:
   task_name: lift
 task_name: lift_lowdim
 training:
-  checkpoint_every: 1999
+  checkpoint_every: 99
   debug: false
   device: cuda:0
   gradient_accumulate_every: 1
@@ -149,9 +150,9 @@ training:
   lr_warmup_steps: 500
   max_train_steps: null
   max_val_steps: null
-  num_epochs: 2000
+  num_epochs: 100
   resume: true
-  rollout_every: 1999
+  rollout_every: 99
   sample_every: 5
   seed: 42
   tqdm_interval_sec: 1.0
