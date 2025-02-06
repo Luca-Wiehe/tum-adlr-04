@@ -125,7 +125,7 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         n_action_steps=2,
         n_latency_steps=0,
         log_dir="./data/rl_logs",
-        num_envs=16
+        num_envs=1
     ):
         """
         :param dataset_path: path to the robomimic dataset
