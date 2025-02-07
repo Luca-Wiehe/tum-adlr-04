@@ -214,7 +214,7 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
             env=self.training_env,
             verbose=1,
             n_steps=400,
-            tensorboard_log=self.output_dir
+            tensorboard_log=None  # Disable TensorBoard logging
         )
 
     def run_training(self):
@@ -224,10 +224,7 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         Return a dictionary so the outer loop can log it to wandb.
         """
         self.model.learn(total_timesteps=self.total_timesteps, progress_bar=True)
-        # Return some training metrics for wandb logging
-        return {
-            "train_timesteps": self.total_timesteps
-        }
+        return {}
 
     def save_checkpoint(self, save_dir: str, epoch: int):
         """
@@ -241,6 +238,9 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
     def evaluate(self, n_episodes=5):
         env = self.eval_env
         episode_rewards = []
+        diffusion_avgs = []
+        refinement_avgs = []
+        step_time_avgs = []
 
         for ep in tqdm(range(n_episodes), desc="Evaluating"):
             obs = env.reset()
@@ -250,10 +250,22 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
                 action, _ = self.model.predict(obs)
                 obs, reward, done, info = env.step(action)
                 total_reward += reward
+                if done and 'episode_diffusion_avg' in info:
+                    diffusion_avgs.append(info['episode_diffusion_avg'])
+                    refinement_avgs.append(info['episode_refinement_avg'])
+                    step_time_avgs.append(info['episode_avg_step_time'])
             episode_rewards.append(total_reward)
-
+        
         mean_reward = float(np.mean(episode_rewards))
+        mean_diffusion = float(np.mean(diffusion_avgs)) if diffusion_avgs else 0.0
+        mean_refinement = float(np.mean(refinement_avgs)) if refinement_avgs else 0.0
+        mean_step_time = float(np.mean(step_time_avgs)) if step_time_avgs else 0.0
+        
         return {
             "eval_episodes": n_episodes,
-            "mean_reward": mean_reward
+            "mean_reward": mean_reward,
+            "mean_diffusion": mean_diffusion,
+            "mean_refinement": mean_refinement,
+            "mean_step_time": mean_step_time
         }
+

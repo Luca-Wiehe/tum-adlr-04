@@ -44,7 +44,7 @@ task:
     action_dim: 10
     n_obs_steps: 3
     n_action_steps: 3
-    total_timesteps: 400
+    total_timesteps: 3000
 
 # Training configuration
 training:
@@ -52,8 +52,8 @@ training:
   seed: 42
   num_epochs: 1000
   steps_per_epoch: 1000
-  checkpoint_every: 20
-  eval_every: 25
+  checkpoint_every: 250
+  eval_every: 5
   eval_episodes: 25
 
 # Logging configuration

@@ -159,23 +159,18 @@ class TrainRobomimicLowdimWorkspace(BaseWorkspace):
                     step_log.update(runner_log)
 
                 # run validation
-                if (self.epoch % cfg.training.val_every) == 0:
-                    with torch.no_grad():
-                        val_losses = list()
-                        with tqdm.tqdm(val_dataloader, desc=f"Validation epoch {self.epoch}", 
-                                leave=False, mininterval=cfg.training.tqdm_interval_sec) as tepoch:
-                            for batch_idx, batch in enumerate(tepoch):
-                                batch = dict_apply(batch, lambda x: x.to(device, non_blocking=True))
-                                info = self.model.train_on_batch(batch, epoch=self.epoch, validate=True)
-                                loss = info['losses']['action_loss']
-                                val_losses.append(loss)
-                                if (cfg.training.max_val_steps is not None) \
-                                    and batch_idx >= (cfg.training.max_val_steps-1):
-                                    break
-                        if len(val_losses) > 0:
-                            val_loss = torch.mean(torch.tensor(val_losses)).item()
-                            # log epoch average validation loss
-                            step_log['val_loss'] = val_loss
+                if ((self.epoch + 1) % cfg.training.eval_every) == 0:
+                    eval_metrics = env_runner.evaluate(n_episodes=cfg.training.eval_episodes)
+                    
+                    # Log metrics including the new ones
+                    step_log = {
+                        'epoch': self.epoch,
+                        'global_step': self.global_step,
+                        **eval_metrics
+                    }
+                    
+                    wandb_run.log(step_log, step=self.global_step)
+                    json_logger.log(step_log)
 
                 # checkpoint
                 if (self.epoch % cfg.training.checkpoint_every) == 0:
