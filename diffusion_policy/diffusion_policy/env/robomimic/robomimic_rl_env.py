@@ -20,7 +20,8 @@ class RobomimicRLEnv(gym.Env):
         max_episode_steps: int = 400,
         n_obs_steps: int = 2,
         n_action_steps: int = 3,
-        n_latency_steps: int = 0
+        n_latency_steps: int = 0,
+        rl_only: bool = False
     ):
         super().__init__()
         
@@ -40,6 +41,7 @@ class RobomimicRLEnv(gym.Env):
         self.max_episode_steps = max_episode_steps
         self.n_obs_steps = n_obs_steps
         self.n_latency_steps = n_latency_steps
+        self.rl_only = rl_only
         self.current_step = 0
         self.action_dim = action_dim
 
@@ -49,13 +51,20 @@ class RobomimicRLEnv(gym.Env):
         self.single_obs_dim = initial_obs.shape[-1]
         self.obs_dim = self.single_obs_dim * self.n_obs_steps
         
-        # Augment observation: flattened raw obs + imitation (diffusion) action
-        self.observation_space = spaces.Box(
-            low=-np.inf, 
-            high=np.inf, 
-            shape=(self.obs_dim + self.action_dim,),
-            dtype=np.float32
-        )
+        if self.rl_only:
+            self.observation_space = spaces.Box(
+                low=-np.inf, 
+                high=np.inf, 
+                shape=(self.obs_dim,),
+                dtype=np.float32
+            )
+        else:
+            self.observation_space = spaces.Box(
+                low=-np.inf, 
+                high=np.inf, 
+                shape=(self.obs_dim + self.action_dim,),
+                dtype=np.float32
+            )
         
         self.action_space = spaces.Box(
             low=-1.0, 
@@ -86,20 +95,28 @@ class RobomimicRLEnv(gym.Env):
     def _combine_obs(self, obs_history, imitation_action):
         """Flatten the obs history and concatenate the imitation action."""
         flat_obs = obs_history.reshape(-1).astype(np.float32)
-        return np.concatenate([flat_obs, imitation_action.astype(np.float32)], axis=0)
+        if self.rl_only:
+            return flat_obs
+        else:
+            return np.concatenate([flat_obs, imitation_action.astype(np.float32)], axis=0)
     
     def reset(self):
         """Reset the environment and per-episode metrics."""
         self.diffusion_policy.reset()
-        obs = self.underlying_env.reset()  # shape: (n_obs_steps, obs_dim)
+        obs = self.underlying_env.reset()
         self.current_step = 0
         self.obs_history = obs.copy()
-        self.last_imitation_action = self._compute_imitation_action(self.obs_history)
-        # Reset per-episode metrics
+        if not self.rl_only:
+            self.last_imitation_action = self._compute_imitation_action(self.obs_history)
+        else:
+            self.last_imitation_action = np.zeros(self.action_dim)
+        combined_obs = self._combine_obs(self.obs_history, self.last_imitation_action)
+
         self.episode_diffusion_norms = []
         self.episode_refinement_norms = []
         self.episode_step_times = []
-        return self._combine_obs(self.obs_history, self.last_imitation_action)
+
+        return combined_obs
     
     def step(self, rl_refinement_action):
         """
@@ -107,11 +124,15 @@ class RobomimicRLEnv(gym.Env):
         and return the augmented observation.
         """
         start_time = time.perf_counter()
-        
-        # Use the previously computed diffusion (imitation) action
-        diffusion_action = self.last_imitation_action
-        # Combine with the refinement delta
-        final_action = diffusion_action + 0.05 * rl_refinement_action
+
+        if self.rl_only:
+            # Use RL action directly
+            final_action = rl_refinement_action
+            diffusion_action = np.zeros_like(final_action)
+        else:
+            # Combine with diffusion action
+            diffusion_action = self.last_imitation_action
+            final_action = diffusion_action + 0.05 * rl_refinement_action
         
         if self.abs_action:
             if self.rotation_transformer is not None:
@@ -136,11 +157,12 @@ class RobomimicRLEnv(gym.Env):
         self.episode_refinement_norms.append(refinement_norm)
         self.episode_step_times.append(step_time)
         
-        # Update observation history as before
+        # Update observation history
         raw_obs = self.underlying_env.get_observation()
         self.obs_history = np.roll(self.obs_history, -1, axis=0)
         self.obs_history[-1] = raw_obs
-        self.last_imitation_action = self._compute_imitation_action(self.obs_history)
+        if not self.rl_only:
+            self.last_imitation_action = self._compute_imitation_action(self.obs_history)
         combined_obs = self._combine_obs(self.obs_history, self.last_imitation_action)
         
         if self.current_step >= self.max_episode_steps:

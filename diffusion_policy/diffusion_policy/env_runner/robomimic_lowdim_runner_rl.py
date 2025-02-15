@@ -125,7 +125,8 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         n_action_steps=2,
         n_latency_steps=0,
         log_dir="./data/rl_logs",
-        num_envs=1
+        num_envs=1,
+        rl_only=False
     ):
         """
         :param dataset_path: path to the robomimic dataset
@@ -159,6 +160,7 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         self.n_latency_steps = n_latency_steps
         self.log_dir = log_dir
         self.num_envs = num_envs
+        self.rl_only = rl_only
 
         # If the user wants absolute actions and a rotation transform is not passed, create a default one
         if self.abs_action and not self.rotation_transformer:
@@ -205,7 +207,8 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
             max_episode_steps=self.max_episode_steps,
             n_obs_steps=self.n_obs_steps,
             n_action_steps=n_action_steps,
-            n_latency_steps=self.n_latency_steps
+            n_latency_steps=self.n_latency_steps,
+            rl_only=self.rl_only
         )
 
         # Create PPO model (no TensorBoard logs to avoid .tfevents)

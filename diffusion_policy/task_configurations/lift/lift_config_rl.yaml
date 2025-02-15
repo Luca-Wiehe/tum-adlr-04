@@ -44,7 +44,8 @@ task:
     action_dim: 10
     n_obs_steps: 3
     n_action_steps: 3
-    total_timesteps: 3000
+    total_timesteps: 1000
+    rl_only: true
 
 # Training configuration
 training:
@@ -53,14 +54,14 @@ training:
   num_epochs: 1000
   steps_per_epoch: 1000
   checkpoint_every: 250
-  eval_every: 5
+  eval_every: 100
   eval_episodes: 25
 
 # Logging configuration
 logging:
   mode: online
   project: lift-rl
-  name: ppo_refinement
+  name: ppo_only
   tags:
     - lift
     - ppo
