@@ -102,8 +102,39 @@ python diffusion_policy/train.py --config-dir=./diffusion_policy/task_configurat
 
 
 ### Model Inference
+To execute inference 
+```
+python diffusion_policy/eval.py --config-dir=./diffusion_policy/task_configurations/{task_name} --config-name={task_name}_config_{approach_name}.yaml
+```
 
+The available approaches and tasks are the same as for training. Make sure to specify the corresponding checkpoints in your configuration `.yaml`-file. Alternatively, you can set the `eval_all: true` flag in your `train.py` run and execute several trained checkpoints in eval_mode.
 
 ### Executing Hyperparameter Analysis
 One of our primary goals is to test how hyperparameter configurations differ across approaches. To explore hyperparameter configurations in an informed way, we provide code to conduct hyperparameter search.
+```
+python hyperparameter_search.py --task {task_name} --search-type {search_type} 
+```
 
+<details>
+<summary>Available values for task_name</summary>
+
+`task_name` | Name | Description
+--- | --- | ---
+`lift` | Lift | The robot needs to lift an object from the desk using its gripper
+`tool_hang` | Tool Hang | The robot needs to hang a tool with a squared cutout onto a pole
+
+</details>
+
+<details>
+<summary>Available values for search_type</summary>
+
+`search_type` | Name | Our Contribution | Description
+--- | --- | :---: | ---
+`bayesian` | Bayesian Search | X | Tests hyperparameters using Bayesian Search with Gaussian Processes and Expected Improvement
+`grid` | Grid Search | X | Tests hyperparameters in a grid search of specified size
+</details>
+
+Once you have trained run your code with a set of hyperparameter configurations, you can visualize your hyperparameter tests in a grid using
+```
+python visualize_hparams.py
+```
