@@ -15,6 +15,18 @@ Repository for the course "Advanced Deep Learning for Robotics" at TUM. This rep
 
 Our experiments include test for important hyperparameters like `observation_horizon` and `action_horizon`, adaptations of the network architectures to check convergence speeds and performance, encoding the goal state to check its impact on performance, and a Reinforcement Learning agent that allows us to generalize to out-of-distribution data.
 
+<div style="text-align: center;">
+  <img src="https://github.com/user-attachments/assets/5f62cfa9-84f1-4038-82e8-28436050cd14" style="width:200px;" alt="Successful RL Refinement in the Lift Task">
+  <img src="https://github.com/user-attachments/assets/898d1232-005e-4963-b2f4-a1065615e3cb" style="width:200px;" alt="Successful Diffusion Policy in the Tool Hang Task">
+  <img src="https://github.com/user-attachments/assets/9ed9f312-eab6-4515-bfdc-6293084158df" style="width:200px;" alt="Failed RL Refinement in the Lift Task">
+</div>
+
+<p>
+(1) The first GIF shows the RL agent successfully refining its policy during the lift task.<br>
+(2) The second GIF demonstrates the diffusion policy achieving success in the tool hang task.<br>
+(3) The third GIF depicts a scenario where the RL refinement does not yield the desired outcome in the lift task.
+</p>
+
 ## Google Cloud Setup
 In case of doubt, I found [this blogpost](https://askubuntu.com/questions/1077061/how-do-i-install-nvidia-and-cuda-drivers-into-ubuntu/1077063#1077063) very helpful.
 
