@@ -1,14 +1,13 @@
 import os
-import hydra
 import torch
-from omegaconf import OmegaConf
-import pathlib
 import numpy as np
 import random
+import hydra
+import pathlib
 import wandb
 import dill
 from tqdm import tqdm
-
+from omegaconf import OmegaConf
 from diffusion_policy.workspace.base_workspace import BaseWorkspace
 from diffusion_policy.env_runner.base_lowdim_runner import BaseLowdimRunner
 from diffusion_policy.common.json_logger import JsonLogger
@@ -103,6 +102,32 @@ class TrainRLWorkspace(BaseWorkspace):
 
                 self.global_step += cfg.training.steps_per_epoch
                 self.epoch = epoch
+
+    def evaluate_all(self, n_episodes):
+        """
+        Evaluate all three approaches (rl_only, rl_refinement, diffusion_only) on the same validation data,
+        saving evaluation videos in separate directories.
+        Returns a dictionary with metrics for each approach.
+        """
+        modes = ['rl_only', 'rl_refinement', 'diffusion_only']
+        results = {}
+        for mode in modes:
+            # Determine video save directory for this mode
+            video_dir = os.path.join(self.output_dir, "eval_videos", mode)
+            os.makedirs(video_dir, exist_ok=True)
+
+            # For 'rl_only' and 'diffusion_only', we use a flat observation space.
+            rl_only_flag = (mode != 'rl_refinement')
+            env_runner = hydra.utils.instantiate(
+                self.cfg.task.env_runner,
+                diffusion_policy=self.diffusion_policy,
+                rl_only=rl_only_flag,
+                evaluation_mode=mode,
+                video_save_path=video_dir
+            )
+            metrics = env_runner.evaluate(n_episodes=n_episodes)
+            results[mode] = metrics
+        return results
 
 @hydra.main(
     version_base=None,

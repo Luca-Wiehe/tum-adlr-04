@@ -1,7 +1,7 @@
-import torch
-import numpy as np
 import time
+import torch
 import gym
+import numpy as np
 from gym import spaces
 from diffusion_policy.policy.base_lowdim_policy import BaseLowdimPolicy
 from diffusion_policy.model.common.rotation_transformer import RotationTransformer
@@ -21,17 +21,20 @@ class RobomimicRLEnv(gym.Env):
         n_obs_steps: int = 2,
         n_action_steps: int = 3,
         n_latency_steps: int = 0,
-        rl_only: bool = False
+        rl_only: bool = False,
+        evaluation_mode='rl_refinement',
+        video_save_path: str = None  # New parameter for video saving
     ):
         super().__init__()
         
-        # Create the underlying Robomimic environment
+        # Create the underlying Robomimic environment (pass video_save_path)
         self.underlying_env = robomimic_env_fn(
             dataset_path, 
             obs_keys, 
             n_obs_steps=n_obs_steps,
             n_action_steps=n_action_steps,
-            abs_action=abs_action
+            abs_action=abs_action,
+            video_save_path=video_save_path
         )
         
         self.diffusion_policy = diffusion_policy
@@ -42,6 +45,7 @@ class RobomimicRLEnv(gym.Env):
         self.n_obs_steps = n_obs_steps
         self.n_latency_steps = n_latency_steps
         self.rl_only = rl_only
+        self.evaluation_mode = evaluation_mode
         self.current_step = 0
         self.action_dim = action_dim
 
@@ -51,18 +55,19 @@ class RobomimicRLEnv(gym.Env):
         self.single_obs_dim = initial_obs.shape[-1]
         self.obs_dim = self.single_obs_dim * self.n_obs_steps
         
-        if self.rl_only:
+        # Set observation space based on evaluation_mode
+        if self.evaluation_mode == 'rl_refinement':
             self.observation_space = spaces.Box(
                 low=-np.inf, 
                 high=np.inf, 
-                shape=(self.obs_dim,),
+                shape=(self.obs_dim + self.action_dim,),
                 dtype=np.float32
             )
         else:
             self.observation_space = spaces.Box(
                 low=-np.inf, 
                 high=np.inf, 
-                shape=(self.obs_dim + self.action_dim,),
+                shape=(self.obs_dim,),
                 dtype=np.float32
             )
         
@@ -93,12 +98,12 @@ class RobomimicRLEnv(gym.Env):
         return diffusion_action[0, -1]
     
     def _combine_obs(self, obs_history, imitation_action):
-        """Flatten the obs history and concatenate the imitation action."""
+        """Flatten the obs history and concatenate the imitation action if needed."""
         flat_obs = obs_history.reshape(-1).astype(np.float32)
-        if self.rl_only:
-            return flat_obs
-        else:
+        if self.evaluation_mode == 'rl_refinement':
             return np.concatenate([flat_obs, imitation_action.astype(np.float32)], axis=0)
+        else:
+            return flat_obs
     
     def reset(self):
         """Reset the environment and per-episode metrics."""
@@ -106,7 +111,7 @@ class RobomimicRLEnv(gym.Env):
         obs = self.underlying_env.reset()
         self.current_step = 0
         self.obs_history = obs.copy()
-        if not self.rl_only:
+        if self.evaluation_mode in ['rl_refinement', 'diffusion_only']:
             self.last_imitation_action = self._compute_imitation_action(self.obs_history)
         else:
             self.last_imitation_action = np.zeros(self.action_dim)
@@ -120,19 +125,25 @@ class RobomimicRLEnv(gym.Env):
     
     def step(self, rl_refinement_action):
         """
-        Combine the diffusion action with the RL refinement, record per-step metrics,
+        Combine the diffusion action with the RL refinement (if applicable), record per-step metrics,
         and return the augmented observation.
         """
         start_time = time.perf_counter()
 
-        if self.rl_only:
-            # Use RL action directly
+        if self.evaluation_mode == 'rl_only':
+            # Use RL action directly (pure RL)
             final_action = rl_refinement_action
             diffusion_action = np.zeros_like(final_action)
-        else:
-            # Combine with diffusion action
+        elif self.evaluation_mode == 'rl_refinement':
+            # Combine diffusion action with RL refinement
             diffusion_action = self.last_imitation_action
             final_action = diffusion_action + 0.05 * rl_refinement_action
+        elif self.evaluation_mode == 'diffusion_only':
+            # Use only the diffusion action (pure diffusion)
+            final_action = self.last_imitation_action
+            diffusion_action = self.last_imitation_action
+        else:
+            raise ValueError(f"Invalid evaluation_mode: {self.evaluation_mode}")
         
         if self.abs_action:
             if self.rotation_transformer is not None:
@@ -161,7 +172,7 @@ class RobomimicRLEnv(gym.Env):
         raw_obs = self.underlying_env.get_observation()
         self.obs_history = np.roll(self.obs_history, -1, axis=0)
         self.obs_history[-1] = raw_obs
-        if not self.rl_only:
+        if self.evaluation_mode in ['rl_refinement', 'diffusion_only']:
             self.last_imitation_action = self._compute_imitation_action(self.obs_history)
         combined_obs = self._combine_obs(self.obs_history, self.last_imitation_action)
         

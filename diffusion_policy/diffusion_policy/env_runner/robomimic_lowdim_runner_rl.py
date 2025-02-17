@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import os
 from tqdm import tqdm
+import datetime
 
 # Robomimic Imports
 import robomimic.utils.file_utils as FileUtils
@@ -47,25 +48,12 @@ def single_robomimic_env(
     max_steps=400,
     n_obs_steps=2,
     n_action_steps=2,
-    abs_action=False
+    abs_action=False,
+    video_save_path: str = None
 ):
     """
     Creates a single Robomimic environment instance with appropriate wrappers.
-    
-    Args:
-        dataset_path (str): Path to the demonstration dataset
-        obs_keys (list): List of observation keys to use
-        render_hw (tuple): Height and width for rendering
-        render_camera_name (str): Name of the camera to use for rendering
-        max_steps (int): Maximum number of steps per episode
-        n_obs_steps (int): Number of observation steps
-        n_action_steps (int): Number of action steps
-        abs_action (bool): Whether to use absolute actions
-    
-    Returns:
-        gym.Env: A wrapped Robomimic environment
     """
-    # Get environment metadata from dataset
     dataset_path = os.path.expanduser(dataset_path)
     env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path)
     
@@ -75,8 +63,17 @@ def single_robomimic_env(
         obs_keys=obs_keys,
         abs_action=abs_action
     )
+
+    # If video_save_path is provided and it's a directory, generate a unique filename using the current time.
+    if video_save_path is not None:
+        if os.path.isdir(video_save_path):
+            os.makedirs(video_save_path, exist_ok=True)
+            now_str = datetime.datetime.now().strftime("%H-%M-%S")
+            video_save_path = os.path.join(video_save_path, f"{now_str}.mp4")
+        print(f"[INFO] video_path: {video_save_path}")
+    else:
+        print("[INFO] video_path: None")
     
-    # Wrap the environment
     wrapped_env = MultiStepWrapper(
         VideoRecordingWrapper(
             RobomimicLowdimWrapper(
@@ -87,14 +84,15 @@ def single_robomimic_env(
                 render_camera_name=render_camera_name
             ),
             video_recoder=VideoRecorder.create_h264(
-                fps=10,  # Default FPS
+                fps=10,      # Default FPS
                 codec='h264',
                 input_pix_fmt='rgb24',
-                crf=22,  # Default CRF value
+                crf=22,      # Default CRF value
                 thread_type='FRAME',
                 thread_count=1
             ),
-            file_path=None  # You can specify a path if you want to record videos
+            file_path=video_save_path,  # Now a valid file path if provided
+            steps_per_render=1         # Adjust as needed
         ),
         n_obs_steps=n_obs_steps,
         n_action_steps=n_action_steps,
@@ -102,7 +100,6 @@ def single_robomimic_env(
     )
 
     return wrapped_env
-
 
 class RobomimicLowdimRunnerRL(BaseLowdimRunner):
     """
@@ -115,7 +112,7 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         dataset_path,
         obs_keys,
         action_dim,
-        diffusion_policy: BaseLowdimPolicy,
+        diffusion_policy,
         device: torch.device,
         abs_action=False,
         rotation_transformer=None,
@@ -126,7 +123,9 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         n_latency_steps=0,
         log_dir="./data/rl_logs",
         num_envs=1,
-        rl_only=False
+        rl_only=False,
+        evaluation_mode='rl_refinement',
+        video_save_path: str = None
     ):
         """
         :param dataset_path: path to the robomimic dataset
@@ -143,6 +142,8 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         :param n_latency_steps: how many predicted action steps to skip for latency
         :param log_dir: path to directory for saving logs (not used for TensorBoard in this example)
         :param num_envs: number of parallel environments to speed up data collection
+        :param rl_only: flag indicating if only RL actions are used (affects observation space)
+        :param evaluation_mode: one of 'rl_only', 'rl_refinement', or 'diffusion_only'
         """
         super().__init__(log_dir)
         
@@ -161,6 +162,8 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
         self.log_dir = log_dir
         self.num_envs = num_envs
         self.rl_only = rl_only
+        self.evaluation_mode = evaluation_mode
+        self.video_save_path = video_save_path
 
         # If the user wants absolute actions and a rotation transform is not passed, create a default one
         if self.abs_action and not self.rotation_transformer:
@@ -181,7 +184,10 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
                     n_obs_steps=self.n_obs_steps,
                     action_dim=self.action_dim,
                     n_action_steps=self.n_action_steps,
-                    n_latency_steps=self.n_latency_steps
+                    n_latency_steps=self.n_latency_steps,
+                    rl_only=self.rl_only,
+                    evaluation_mode=self.evaluation_mode,
+                    video_save_path=self.video_save_path
                 )
                 env.seed(seed_offset)
                 return env
@@ -206,9 +212,11 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
             rotation_transformer=self.rotation_transformer,
             max_episode_steps=self.max_episode_steps,
             n_obs_steps=self.n_obs_steps,
-            n_action_steps=n_action_steps,
+            n_action_steps=self.n_action_steps,
             n_latency_steps=self.n_latency_steps,
-            rl_only=self.rl_only
+            rl_only=self.rl_only,
+            evaluation_mode=self.evaluation_mode,
+            video_save_path=self.video_save_path
         )
 
         # Create PPO model (no TensorBoard logs to avoid .tfevents)
@@ -271,4 +279,3 @@ class RobomimicLowdimRunnerRL(BaseLowdimRunner):
             "mean_refinement": mean_refinement,
             "mean_step_time": mean_step_time
         }
-

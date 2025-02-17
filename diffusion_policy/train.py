@@ -29,7 +29,12 @@ def main(cfg: OmegaConf):
 
     cls = hydra.utils.get_class(cfg._target_)
     workspace: BaseWorkspace = cls(cfg)
-    workspace.run()
+
+    if cfg.evaluate_all:
+        results = workspace.evaluate_all(cfg.training.eval_episodes)
+        print(results)
+    else: 
+        workspace.run()
 
 if __name__ == "__main__":
     main()

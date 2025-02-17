@@ -2,6 +2,9 @@ _target_: diffusion_policy.workspace.train_diffusion_rl_lowdim_workspace.TrainRL
 action_dim: 10
 obs_dim: 19
 diffusion_ckpt: /home/luca_daniel/tum-adlr-04/outputs/diffusion_ckpt/epoch=0099-test_mean_score=0.700.ckpt
+rl_only_ckpt: /home/luca_daniel/tum-adlr-04/outputs/rl_only_ckpt/ppo_checkpoint_1000.zip
+rl_refinement_ckpt: /home/luca_daniel/tum-adlr-04/outputs/rl_refinement_ckpt/ppo_checkpoint_1000.zip
+evaluate_all: true
 
 # Policy configuration
 policy:
@@ -45,7 +48,6 @@ task:
     n_obs_steps: 3
     n_action_steps: 3
     total_timesteps: 1000
-    rl_only: true
 
 # Training configuration
 training:
@@ -55,7 +57,7 @@ training:
   steps_per_epoch: 1000
   checkpoint_every: 250
   eval_every: 100
-  eval_episodes: 25
+  eval_episodes: 10
 
 # Logging configuration
 logging:

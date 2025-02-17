@@ -39,9 +39,9 @@ logging:
 multi_run:
   run_dir: data/outputs/2023.02.23/19.52.27_train_diffusion_goal_lowdim_lift_lowdim
   wandb_name_base: 2023.02.23-19.52.27_train_diffusion_goal_lowdim_lift_lowdim
-n_action_steps: 8
+n_action_steps: 3
 n_latency_steps: 0
-n_obs_steps: 2
+n_obs_steps: 3
 name: train_diffusion_goal_lowdim
 obs_as_global_cond: true
 obs_as_local_cond: false
@@ -70,14 +70,14 @@ policy:
     - 256
     - 512
     - 1024
-    global_cond_dim: 38 #57
+    global_cond_dim: 57 #57
     goal_cond_dim: 38
     input_dim: 10
     kernel_size: 5
     local_cond_dim: null
     n_groups: 8
-  n_action_steps: 8
-  n_obs_steps: 2
+  n_action_steps: 3
+  n_obs_steps: 3
   n_to_goal_steps: 2
   noise_scheduler:
     _target_: diffusers.schedulers.scheduling_ddpm.DDPMScheduler
@@ -123,10 +123,10 @@ task:
     dataset_path: data/robomimic/datasets/lift/ph/low_dim_abs.hdf5
     fps: 10
     max_steps: 400
-    n_action_steps: 8
+    n_action_steps: 3
     n_envs: 28
     n_latency_steps: 0
-    n_obs_steps: 2
+    n_obs_steps: 3
     n_to_goal_steps: 2    
     n_test: 50
     n_test_vis: 3
@@ -170,7 +170,7 @@ training:
   seed: 42
   tqdm_interval_sec: 1.0
   use_ema: true
-  val_every: 25
+  val_every: 99
 val_dataloader:
   batch_size: 256
   num_workers: 1
